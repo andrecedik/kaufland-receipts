@@ -59,13 +59,16 @@ def watch(
     if not folder.exists():
         typer.secho(f"Watch folder does not exist yet: {folder}", fg=typer.colors.YELLOW)
         raise typer.Exit(1)
-    typer.echo(f"Watching {folder}")
+    typer.echo(f"Watching {folder} (every {interval:.0f}s, Ctrl+C to stop)")
     while True:
+        seen = len(list(folder.glob("*.pdf")))
         added, errors = scan_once(store, folder)
         for name, msg in errors:
             typer.secho(f"  ✗ {name}: {msg}", fg=typer.colors.RED)
         for rid in added:
             typer.secho(f"  + {rid}", fg=typer.colors.GREEN)
+        if not added and not errors:
+            typer.echo(f"[{time.strftime('%H:%M:%S')}] scanned {seen} PDF(s), nothing new")
         if once:
             break
         time.sleep(interval)
