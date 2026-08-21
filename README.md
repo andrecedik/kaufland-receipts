@@ -29,7 +29,8 @@ downstream changes when automation lands.
 2. On the Mac:
 
    ```sh
-   uv run kaufland watch            # poll iCloud/digital-receipts, ingest new PDFs
+   uv run kaufland watch            # check iCloud/digital-receipts once, ingest new PDFs, exit
+   uv run kaufland watch --no-once  # or keep polling in the background instead
    # or one-shot:
    uv run kaufland ingest ~/path/to/a-receipt.pdf
    ```

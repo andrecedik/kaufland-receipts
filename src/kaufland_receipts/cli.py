@@ -51,15 +51,23 @@ def ingest(path: Path = typer.Argument(..., help="A receipt PDF, or a folder of 
 @app.command()
 def watch(
     folder: Path = typer.Option(DEFAULT_WATCH_DIR, help="iCloud folder to watch."),
-    interval: float = typer.Option(30.0, help="Seconds between scans."),
-    once: bool = typer.Option(False, help="Scan a single time and exit."),
+    interval: float = typer.Option(30.0, help="Seconds between scans (only with --no-once)."),
+    once: bool = typer.Option(
+        True, help="Scan a single time and exit. Pass --no-once to poll continuously."
+    ),
 ):
-    """Poll an iCloud folder and ingest new receipt PDFs as they appear."""
+    """Ingest new receipt PDFs from an iCloud folder.
+
+    By default this checks the folder once, ingests anything new, and exits —
+    run it whenever you've shared a receipt. Pass --no-once to keep it running
+    and polling in the background instead.
+    """
     store = _store()
     if not folder.exists():
         typer.secho(f"Watch folder does not exist yet: {folder}", fg=typer.colors.YELLOW)
         raise typer.Exit(1)
-    typer.echo(f"Watching {folder} (every {interval:.0f}s, Ctrl+C to stop)")
+    if not once:
+        typer.echo(f"Watching {folder} (every {interval:.0f}s, Ctrl+C to stop)")
     while True:
         seen = len(list(folder.glob("*.pdf")))
         added, errors = scan_once(store, folder)
@@ -68,7 +76,8 @@ def watch(
         for rid in added:
             typer.secho(f"  + {rid}", fg=typer.colors.GREEN)
         if not added and not errors:
-            typer.echo(f"[{time.strftime('%H:%M:%S')}] scanned {seen} PDF(s), nothing new")
+            stamp = f"[{time.strftime('%H:%M:%S')}] " if not once else ""
+            typer.echo(f"{stamp}scanned {seen} PDF(s) in {folder.name}, nothing new")
         if once:
             break
         time.sleep(interval)
