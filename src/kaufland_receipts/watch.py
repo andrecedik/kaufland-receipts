@@ -23,7 +23,7 @@ DEFAULT_WATCH_DIR = (
     / "Library"
     / "Mobile Documents"
     / "com~apple~CloudDocs"
-    / "Kassenbons"
+    / "digital-receipts"
 )
 
 

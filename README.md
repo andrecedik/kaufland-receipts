@@ -25,11 +25,11 @@ downstream changes when automation lands.
 ## PDF pipeline
 
 1. In the Kaufland app: **Digitale Kassenbons → open a receipt → als PDF
-   speichern → share to iCloud Drive** into a folder named `Kassenbons`.
+   speichern → share to iCloud Drive** into a folder named `digital-receipts`.
 2. On the Mac:
 
    ```sh
-   uv run kaufland watch            # poll iCloud/Kassenbons, ingest new PDFs
+   uv run kaufland watch            # poll iCloud/digital-receipts, ingest new PDFs
    # or one-shot:
    uv run kaufland ingest ~/path/to/a-receipt.pdf
    ```
