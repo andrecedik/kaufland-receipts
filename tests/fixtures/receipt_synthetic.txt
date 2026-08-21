@@ -1,0 +1,25 @@
+You saved 1.25 EUR  with Kaufland Card
+You earned 20  points for this purchase.
+        Kaufland - Teststraße 1
+               12345 Teststadt
+                DE000000000
+                                 Preis EUR
+  Testartikel Eins                  2,00 B
+  Testartikel Zwei 2 * 1,50         3,00 B
+  Testkaese Gouda
+   3 * 1,00                          3,00 B
+  Testgemuese kg
+   0,500 kg                          1,00 B
+  K Card XTRA Rabatt               -0,50
+  Pfandartikel                      0,25 A
+  Zwischensumme           8,75
+  --------------Rabattaktion--------------
+  K Card XTRA Rabatt               -0,75
+  Summe                             8,00
+  Kaufland Pay                      8,00
+  Steuer %    Brutto     Netto    Steuer
+  A 19,00%      0,25      0,21      0,04
+  B 7,00%       8,75      8,18      0,57
+  Kaufland Card XTRA:          xxxxx0000
+  Datum:07.08.26 Zeit:  12:00:00 Bon:99999
+  Filiale:  1234 Kasse: 1

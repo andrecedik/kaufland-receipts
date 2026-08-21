@@ -1,19 +1,26 @@
 """Parse a Kaufland digital-receipt PDF into a :class:`Receipt`.
 
 The app's "als PDF speichern" export is a real text-layer PDF, so we extract
-text with :mod:`pypdf` (no OCR) and apply layout rules.
+text with :mod:`pypdf` (no OCR) and apply the layout rules below.
 
-.. warning::
-   The regexes below are PROVISIONAL. They are seeded from the community parser
-   `fbsgn/kassenbon-analyzer` (which targets photographed paper receipts) and
-   MUST be validated and corrected against a real Kaufland *digital* PDF export,
-   whose layout differs. Every format-specific constant is tagged ``# FORMAT``
-   so it is easy to find and fix once a sample is in hand.
+The rules were derived from and validated against real digital receipts
+(2026-08): parsed line items reconcile exactly to the printed ``Summe`` on
+every sample. Notable Kaufland specifics:
+
+* Tax classes are ``A`` = 19 % and ``B`` = 7 % (the opposite of the convention
+  in some paper-receipt parsers).
+* A line item can appear in four shapes: simple (``NAME  PRICE TAX``), inline
+  quantity (``NAME  Q * UNIT  TOTAL TAX``), two-line quantity (name on its own
+  line, ``Q * UNIT  TOTAL TAX`` on the next) and two-line weight
+  (``W,WWW kg  TOTAL TAX`` on the next line).
+* ``K Card XTRA Rabatt`` lines (negative, no tax letter) are loyalty discounts;
+  they are kept as negative line items so the receipt reconciles. A final
+  discount can also appear in a ``Rabattaktion`` block between ``Zwischensumme``
+  and ``Summe``.
 """
 
 from __future__ import annotations
 
-import hashlib
 import re
 from datetime import datetime
 from decimal import Decimal
@@ -23,9 +30,11 @@ from pypdf import PdfReader
 
 from .models import LineItem, Receipt, Store
 
+TAX_RATES = {"A": Decimal("0.19"), "B": Decimal("0.07")}
+
 
 def _money(raw: str) -> Decimal:
-    """German number format -> Decimal. '21,83' -> Decimal('21.83')."""
+    """German number format -> Decimal. '103,62' -> Decimal('103.62')."""
     return Decimal(raw.replace(".", "").replace(",", "."))
 
 
@@ -35,102 +44,162 @@ def extract_text(pdf_path: Path) -> str:
     return "\n".join((page.extract_text() or "") for page in reader.pages)
 
 
+# --- line patterns (anchored on the trailing "amount + tax letter") ---
+_INLINE_Q = re.compile(
+    r"^(?P<name>.+?)\s+(?P<qty>\d+)\s*\*\s*(?P<unit>\d+,\d{2})"
+    r"\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$"
+)
+_CONT_Q = re.compile(
+    r"^(?P<qty>\d+)\s*\*\s*(?P<unit>\d+,\d{2})\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$"
+)
+_CONT_W = re.compile(r"^(?P<w>\d+,\d{3})\s*kg\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$")
+_SIMPLE = re.compile(r"^(?P<name>.+?)\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$")
+_DISCOUNT = re.compile(r"^(?P<name>K Card XTRA Rabatt)\s+(?P<amt>-\d+,\d{2})$")
+
+_SUMME = re.compile(r"^Summe\s+(?P<amt>-?\d+,\d{2})$")
+_DATE = re.compile(r"Datum:\s*(\d{2})\.(\d{2})\.(\d{2,4})\s+Zeit:\s*(\d{2}):(\d{2}):(\d{2})")
+_RECEIPT_NO = re.compile(r"Bon:\s*(\d+)")
+_FILIALE = re.compile(r"Filiale:\s*(\d+)\s+Kasse:\s*(\d+)")
+_POSTAL_CITY = re.compile(r"^(?P<plz>\d{5})\s+(?P<city>.+)$")
+
+
 def is_kaufland(text: str) -> bool:
     head = "\n".join(text.splitlines()[:15])
     return "kaufland" in head.lower()
 
 
-# --- FORMAT: line-item / total / date patterns (validate against real PDF) ---
-
-# NAME  UNIT_PRICE  [€ x QTY  LINE_TOTAL]  TAX(A|B)
-_ITEM_RE = re.compile(
-    r"^(?P<name>[A-ZÄÖÜ][A-ZÄÖÜ&.\s\-\d,X]*?)\s+"
-    r"(?P<unit>-?\d+,\d{2})"
-    r"(?:\s*€\s*x\s*(?P<qty>\d+)\s+(?P<line>-?\d+,\d{2}))?"
-    r"\s*\*?(?P<tax>[AB])W?$"
-)
-_TOTAL_RE = re.compile(r"summe\s+€?\s*(?P<total>-?\d+,\d{2})", re.IGNORECASE)  # FORMAT
-_DATE_RE = re.compile(r"(\d{2})\.(\d{2})\.(\d{2,4})\s+(\d{2}):(\d{2})")  # FORMAT
-# A digital receipt should carry a fiscal/receipt number we can use as a stable
-# id. Guessed labels — correct once we see the real PDF.
-_RECEIPT_NO_RE = re.compile(
-    r"(?:Bon[- ]?Nr\.?|Beleg[- ]?Nr\.?|Trace[- ]?Nr\.?)[:\s]*([0-9]+)",
-    re.IGNORECASE,
-)  # FORMAT
+def _parse_store(lines: list[str]) -> Store:
+    store = Store()
+    for ln in lines[:8]:
+        if ln.startswith("Kaufland") and "-" in ln:
+            store.street = ln.split("-", 1)[1].strip()
+        m = _POSTAL_CITY.match(ln)
+        if m:
+            store.postal_code = m["plz"]
+            store.city = m["city"].strip()
+    return store
 
 
-def _parse_date(text: str) -> datetime | None:
-    m = _DATE_RE.search(text)
+def _parse_datetime(text: str) -> datetime | None:
+    m = _DATE.search(text)
     if not m:
         return None
-    dd, mm, yy, hh, mi = m.groups()
+    dd, mm, yy, hh, mi, ss = m.groups()
     year = int(yy) if len(yy) == 4 else 2000 + int(yy)
-    return datetime(year, int(mm), int(dd), int(hh), int(mi))
+    return datetime(year, int(mm), int(dd), int(hh), int(mi), int(ss))
 
 
-def _parse_line_items(text: str) -> list[LineItem]:
+def _receipt_id(text: str, purchased_at: datetime) -> str:
+    """Stable, globally-unique id: Filiale-Kasse-YYYYMMDD-Bon.
+
+    All four components are always printed, and together they uniquely identify a
+    receipt (Bon numbers reset per till/day, so store+till+date+Bon is unique).
+    """
+    fil = _FILIALE.search(text)
+    bon = _RECEIPT_NO.search(text)
+    store_no = fil.group(1) if fil else "x"
+    till = fil.group(2) if fil else "x"
+    bon_no = bon.group(1) if bon else purchased_at.strftime("%H%M%S")
+    return f"kaufland-{store_no}-{till}-{purchased_at:%Y%m%d}-{bon_no}"
+
+
+def _parse_line_items(lines: list[str]) -> list[LineItem]:
+    """Walk the body between the 'Preis EUR' header and 'Summe'.
+
+    Products are captured at their printed price; ``K Card XTRA Rabatt`` lines are
+    captured as negative line items. This is what makes the line-item sum
+    reconcile to the printed total.
+    """
     items: list[LineItem] = []
-    for line in text.splitlines():
-        m = _ITEM_RE.match(line.strip())
-        if not m:
+    pending_name: str | None = None
+    in_body = False
+
+    for ln in lines:
+        if "Preis EUR" in ln:
+            in_body = True
             continue
-        unit = _money(m["unit"])
-        qty = Decimal(m["qty"]) if m["qty"] else Decimal(1)
-        line_total = _money(m["line"]) if m["line"] else unit
-        items.append(
-            LineItem(
-                name=m["name"].strip(),
-                quantity=qty,
-                unit_price=unit,
-                total_price=line_total,
-                tax_class=m["tax"],
-            )
-        )
+        if not in_body:
+            continue
+        if _SUMME.match(ln):  # end of the item region
+            break
+
+        if m := _DISCOUNT.match(ln):
+            items.append(LineItem(name=m["name"], total_price=_money(m["amt"])))
+            pending_name = None
+            continue
+        if m := _INLINE_Q.match(ln):
+            items.append(LineItem(
+                name=m["name"].strip(), quantity=Decimal(m["qty"]),
+                unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
+                tax_class=m["tax"]))
+            pending_name = None
+            continue
+        if (m := _CONT_Q.match(ln)) and pending_name:
+            items.append(LineItem(
+                name=pending_name, quantity=Decimal(m["qty"]),
+                unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
+                tax_class=m["tax"]))
+            pending_name = None
+            continue
+        if (m := _CONT_W.match(ln)) and pending_name:
+            items.append(LineItem(
+                name=pending_name, quantity=_money(m["w"]),
+                total_price=_money(m["amt"]), tax_class=m["tax"]))
+            pending_name = None
+            continue
+        if m := _SIMPLE.match(ln):
+            items.append(LineItem(
+                name=m["name"].strip(), unit_price=_money(m["amt"]),
+                total_price=_money(m["amt"]), tax_class=m["tax"]))
+            pending_name = None
+            continue
+
+        # A bare product-name line (no price yet) — buffer it for the
+        # continuation line that carries the quantity/weight and price.
+        if re.search(r"[A-Za-zÄÖÜäöü]", ln) and not any(
+            kw in ln for kw in ("Zwischensumme", "Steuer", "Kaufland Pay", "----")
+        ):
+            pending_name = ln
     return items
 
 
-def _derive_receipt_id(text: str, purchased_at: datetime, total: Decimal) -> str:
-    """Prefer the printed receipt number; fall back to a content hash.
+def parse_text(text: str, *, source_file: str | None = None, label: str = "receipt") -> Receipt:
+    """Parse an already-extracted receipt text layer into a :class:`Receipt`.
 
-    The fallback keys on date+total so the same receipt yields the same id on
-    re-parse, keeping the store idempotent even without a receipt number.
+    Split out from :func:`parse_pdf` so the format logic is testable against a
+    committed text fixture, with no PDF or filesystem involved.
+
+    Raises ``ValueError`` if the text is not a recognisable Kaufland receipt or
+    if the total/date cannot be found — better to fail loudly than to store a
+    half-parsed receipt.
     """
-    m = _RECEIPT_NO_RE.search(text)
-    if m:
-        return f"kaufland-{m.group(1)}"
-    stamp = purchased_at.strftime("%Y%m%dT%H%M")
-    digest = hashlib.sha256(f"{stamp}|{total}".encode()).hexdigest()[:12]
-    return f"kaufland-{stamp}-{digest}"
+    lines = [ln.strip() for ln in text.splitlines()]
+
+    if not is_kaufland(text):
+        raise ValueError(f"{label}: does not look like a Kaufland receipt")
+
+    purchased_at = _parse_datetime(text)
+    if purchased_at is None:
+        raise ValueError(f"{label}: could not find the Datum/Zeit line")
+
+    summe = next((m for ln in lines if (m := _SUMME.match(ln))), None)
+    if not summe:
+        raise ValueError(f"{label}: could not find the total (Summe)")
+
+    return Receipt(
+        receipt_id=_receipt_id(text, purchased_at),
+        purchased_at=purchased_at,
+        store=_parse_store(lines),
+        line_items=_parse_line_items(lines),
+        total=_money(summe["amt"]),
+        source="pdf",
+        source_file=source_file,
+    )
 
 
 def parse_pdf(pdf_path: Path) -> Receipt:
-    """Parse one receipt PDF into a :class:`Receipt`.
-
-    Raises ``ValueError`` if the file is not a recognisable Kaufland receipt or
-    if the mandatory total/date cannot be found — better to fail loudly than to
-    store a half-parsed receipt.
-    """
+    """Parse one receipt PDF into a :class:`Receipt`."""
     pdf_path = Path(pdf_path)
-    text = extract_text(pdf_path)
-
-    if not is_kaufland(text):
-        raise ValueError(f"{pdf_path.name}: does not look like a Kaufland receipt")
-
-    purchased_at = _parse_date(text)
-    if purchased_at is None:
-        raise ValueError(f"{pdf_path.name}: could not find a purchase date")
-
-    total_match = _TOTAL_RE.search(text)
-    if not total_match:
-        raise ValueError(f"{pdf_path.name}: could not find the total (SUMME)")
-    total = _money(total_match["total"])
-
-    return Receipt(
-        receipt_id=_derive_receipt_id(text, purchased_at, total),
-        purchased_at=purchased_at,
-        store=Store(),
-        line_items=_parse_line_items(text),
-        total=total,
-        source="pdf",
-        source_file=str(pdf_path),
+    return parse_text(
+        extract_text(pdf_path), source_file=str(pdf_path), label=pdf_path.name
     )

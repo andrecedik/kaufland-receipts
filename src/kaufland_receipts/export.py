@@ -61,6 +61,11 @@ def append_price_history(receipts: list[Receipt], path: Path) -> int:
     with path.open("a", encoding="utf-8") as fh:
         for r in receipts:
             for li in r.line_items:
+                # Only log real products with a per-unit price. Skips loyalty
+                # discounts and weight-priced lines, which have no unit price and
+                # would pollute a per-item price series.
+                if li.unit_price is None or li.total_price < 0:
+                    continue
                 key = (r.receipt_id, li.name)
                 if key in seen:
                     continue

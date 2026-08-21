@@ -21,7 +21,8 @@ def _receipt(rid="kaufland-1", total="3.50", when="2026-08-10T14:30:00") -> Rece
         line_items=[
             LineItem(name="MILCH", quantity=Decimal(2), unit_price=Decimal("1.00"),
                      total_price=Decimal("2.00"), tax_class="A"),
-            LineItem(name="BROT", total_price=Decimal("1.50"), tax_class="A"),
+            LineItem(name="BROT", unit_price=Decimal("1.50"),
+                     total_price=Decimal("1.50"), tax_class="A"),
         ],
         total=Decimal(total),
     )

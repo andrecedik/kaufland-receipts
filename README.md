@@ -50,8 +50,9 @@ Receipts are cached as one JSON file each under
 ## Status
 
 - [x] Shared data model, idempotent store, exporters, monthly rollup (tested)
-- [x] PDF ingestion + iCloud watcher — **parser regexes need validating against a
-      real digital-receipt PDF** (every format-specific line is tagged `# FORMAT`)
+- [x] PDF ingestion + iCloud watcher — **parser validated against real
+      digital-receipt PDFs**; parsed line items reconcile exactly to the printed
+      `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
 - [ ] Home Assistant (MQTT) + Grocy stock sync
