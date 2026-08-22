@@ -1,10 +1,11 @@
-# web/ — shadcn/React variant (site-b)
+# web/ — primary site (shadcn/React, site-b)
 
-An A/B alternative to the plain-HTML `site/` generator: same data, same
-warm coral/berry-plum color palette, same four pages (receipt list, receipt
-detail, item price history, statistics), but built with
-[shadcn/ui](https://ui.shadcn.com/) (Radix + Tailwind CSS v4) on Vite +
-React + TypeScript, output to `../site-b/`.
+The primary frontend for browsing receipts — it won an A/B comparison
+against the plain-HTML `site/` generator (2026-08-22), which is now kept
+only as a fallback. Same data, same warm coral/berry-plum color palette,
+same four pages (receipt list, receipt detail, item price history,
+statistics), but built with [shadcn/ui](https://ui.shadcn.com/) (Radix +
+Tailwind CSS v4) on Vite + React + TypeScript, output to `../site-b/`.
 
 ## Building
 

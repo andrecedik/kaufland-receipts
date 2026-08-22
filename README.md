@@ -42,26 +42,18 @@ downstream changes when automation lands.
    uv run kaufland export --format csv -o export.csv
    uv run kaufland prices                      # append to prices.jsonl
    uv run kaufland summary                     # monthly rollup (Markdown)
-   uv run kaufland web                         # static HTML site → site/index.html
    ```
-
-   `kaufland web` regenerates a self-contained static site (no server, no
-   external assets): a receipt list ordered by date, a detail page per
-   receipt, a price-history page per product (with a small chart), and a
-   statistics page (monthly totals + trailing 30/182/365-day spend). Open
-   `site/index.html` directly in a browser, or serve it locally with
-   `python3 -m http.server -d site`. Re-run the command any time to refresh
-   it after new receipts land.
 
 Receipts are cached as one JSON file each under
 `~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — re-run
 `watch`/`ingest` freely.
 
-## A/B site variant (shadcn/React)
+## Site (shadcn/React) — primary
 
-[`web/`](web/) is a second frontend on the same data and color palette,
-built with [shadcn/ui](https://ui.shadcn.com/) on Vite + React instead of
-plain HTML/CSS, output to `site-b/`:
+[`web/`](web/) is the primary way to browse receipts: a Vite + React +
+TypeScript app built with [shadcn/ui](https://ui.shadcn.com/), output to
+`site-b/`. It won an A/B comparison against a plain-HTML static site (below)
+on 2026-08-22 for its richer UI (search/sort, Cmd+K command palette, charts).
 
 ```sh
 uv run kaufland web-b-data   # export receipts.json + copy PDFs for web/
@@ -69,11 +61,26 @@ cd web && npm install && npm run build
 npm run preview               # view it — prints a local URL to open
 ```
 
-Unlike `site/`, `site-b/` needs a local server — it can't be opened via
-`file://`, since Chrome blocks ES module scripts under that origin.
-`npm run preview` (from `web/`) is the easiest way to view it; see
-[`web/README.md`](web/README.md) for the alternative of serving `site-b/`
-directly, and the directory mix-up to avoid there.
+It needs a local server — it can't be opened via `file://`, since Chrome
+blocks ES module scripts under that origin. `npm run preview` (from `web/`)
+is the easiest way to view it; see [`web/README.md`](web/README.md) for the
+alternative of serving `site-b/` directly, and the directory mix-up to avoid
+there.
+
+## Static HTML site — fallback, not actively developed
+
+`site/`, built from `src/kaufland_receipts/web.py`, is a self-contained
+static site (no server, no build step, no external assets) with the same
+pages as the React variant. It lost the A/B comparison but is kept working
+as an option to fall back to if a pre-rendered, dependency-free site is ever
+needed again — it is not getting new features going forward.
+
+```sh
+uv run kaufland web   # regenerate → site/index.html
+```
+
+Open `site/index.html` directly in a browser, or serve it locally with
+`python3 -m http.server -d site`.
 
 ## Status
 
@@ -81,9 +88,9 @@ directly, and the directory mix-up to avoid there.
 - [x] PDF ingestion + iCloud watcher — **parser validated against real
       digital-receipt PDFs**; parsed line items reconcile exactly to the printed
       `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
-- [x] Static HTML site — receipt list, per-receipt detail, per-item price
-      history with a chart, monthly/trailing-window statistics
-- [x] A/B variant: same site on shadcn/React (`web/` → `site-b/`)
+- [x] Static HTML site — kept as fallback, not actively developed (see above)
+- [x] Primary site: shadcn/React (`web/` → `site-b/`) — won the A/B comparison
+      2026-08-22
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
 - [ ] Home Assistant (MQTT) + Grocy stock sync
