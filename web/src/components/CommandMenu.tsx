@@ -21,7 +21,7 @@ export function CommandMenu() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey) && !e.repeat) {
         e.preventDefault()
         setOpen((o) => !o)
       }
