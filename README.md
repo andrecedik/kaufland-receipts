@@ -57,6 +57,21 @@ Receipts are cached as one JSON file each under
 `~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — re-run
 `watch`/`ingest` freely.
 
+## A/B site variant (shadcn/React)
+
+[`web/`](web/) is a second frontend on the same data and color palette,
+built with [shadcn/ui](https://ui.shadcn.com/) on Vite + React instead of
+plain HTML/CSS, output to `site-b/`:
+
+```sh
+uv run kaufland web-b-data   # export receipts.json + copy PDFs for web/
+cd web && npm install && npm run build
+```
+
+Unlike `site/`, `site-b/` needs a local static server (`python3 -m
+http.server` inside it) — it can't be opened via `file://`, since Chrome
+blocks ES module scripts under that origin. See [`web/README.md`](web/README.md).
+
 ## Status
 
 - [x] Shared data model, idempotent store, exporters, monthly rollup (tested)
@@ -65,6 +80,7 @@ Receipts are cached as one JSON file each under
       `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
 - [x] Static HTML site — receipt list, per-receipt detail, per-item price
       history with a chart, monthly/trailing-window statistics
+- [x] A/B variant: same site on shadcn/React (`web/` → `site-b/`)
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
 - [ ] Home Assistant (MQTT) + Grocy stock sync

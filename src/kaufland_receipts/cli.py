@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import time
 from pathlib import Path
 from typing import Optional
@@ -145,6 +146,35 @@ def web(
     build_site(receipts, output)
     typer.secho(
         f"Built site with {len(receipts)} receipt(s) at {output}/index.html",
+        fg=typer.colors.GREEN,
+    )
+
+
+@app.command(name="web-b-data")
+def web_b_data(
+    web_dir: Path = typer.Option(Path("web"), help="Path to the web/ (shadcn variant) project."),
+):
+    """Prepare data for the shadcn/React variant: export receipts.json into
+    web/src/data/ and copy source PDFs into web/public/pdfs/, so `npm run
+    build` (inside web/) has everything it needs. Run this before every
+    site-b rebuild, the same way `kaufland web` reads the store directly.
+    """
+    receipts = _store().all()
+    data_dir = web_dir / "src" / "data"
+    pdfs_dir = web_dir / "public" / "pdfs"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    pdfs_dir.mkdir(parents=True, exist_ok=True)
+
+    (data_dir / "receipts.json").write_text(export_mod.to_json(receipts), encoding="utf-8")
+
+    copied = 0
+    for r in receipts:
+        if r.source_file and Path(r.source_file).exists():
+            shutil.copy2(r.source_file, pdfs_dir / f"{r.receipt_id}.pdf")
+            copied += 1
+
+    typer.secho(
+        f"Wrote {len(receipts)} receipt(s) to {data_dir / 'receipts.json'}, copied {copied} PDF(s) to {pdfs_dir}",
         fg=typer.colors.GREEN,
     )
 
