@@ -12,6 +12,7 @@
     "prebuild": "node scripts/check-node-version.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "prepreview": "node scripts/check-node-version.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
