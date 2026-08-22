@@ -39,7 +39,7 @@ export function ReceiptDetailPage() {
       <div className="mb-4 flex items-center gap-2">
         <Badge variant="secondary">{receipt.receipt_id}</Badge>
         <Badge variant="secondary">source: {receipt.source}</Badge>
-        {receipt.source_file && (
+        {receipt.pdf_available && (
           <a href={`pdfs/${receipt.receipt_id}.pdf`} className="font-medium text-primary hover:underline">
             View original PDF
           </a>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import time
 from pathlib import Path
@@ -165,13 +166,22 @@ def web_b_data(
     data_dir.mkdir(parents=True, exist_ok=True)
     pdfs_dir.mkdir(parents=True, exist_ok=True)
 
-    (data_dir / "receipts.json").write_text(export_mod.to_json(receipts), encoding="utf-8")
-
+    # `source_file` is the ingest-time path, which can move or be deleted
+    # afterwards -- record whether the PDF was actually copied so the UI can
+    # tell "no PDF" apart from "PDF used to exist" instead of trusting the
+    # stale path string (see kaufland-receipts code review finding #6).
     copied = 0
+    records = []
     for r in receipts:
-        if r.source_file and Path(r.source_file).exists():
+        record = r.model_dump(mode="json")
+        pdf_available = bool(r.source_file and Path(r.source_file).exists())
+        record["pdf_available"] = pdf_available
+        if pdf_available:
             shutil.copy2(r.source_file, pdfs_dir / f"{r.receipt_id}.pdf")
             copied += 1
+        records.append(record)
+
+    (data_dir / "receipts.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
 
     typer.secho(
         f"Wrote {len(receipts)} receipt(s) to {data_dir / 'receipts.json'}, copied {copied} PDF(s) to {pdfs_dir}",
