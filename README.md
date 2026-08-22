@@ -42,7 +42,16 @@ downstream changes when automation lands.
    uv run kaufland export --format csv -o export.csv
    uv run kaufland prices                      # append to prices.jsonl
    uv run kaufland summary                     # monthly rollup (Markdown)
+   uv run kaufland web                         # static HTML site → site/index.html
    ```
+
+   `kaufland web` regenerates a self-contained static site (no server, no
+   external assets): a receipt list ordered by date, a detail page per
+   receipt, a price-history page per product (with a small chart), and a
+   statistics page (monthly totals + trailing 30/182/365-day spend). Open
+   `site/index.html` directly in a browser, or serve it locally with
+   `python3 -m http.server -d site`. Re-run the command any time to refresh
+   it after new receipts land.
 
 Receipts are cached as one JSON file each under
 `~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — re-run
@@ -54,6 +63,8 @@ Receipts are cached as one JSON file each under
 - [x] PDF ingestion + iCloud watcher — **parser validated against real
       digital-receipt PDFs**; parsed line items reconcile exactly to the printed
       `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
+- [x] Static HTML site — receipt list, per-receipt detail, per-item price
+      history with a chart, monthly/trailing-window statistics
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
 - [ ] Home Assistant (MQTT) + Grocy stock sync

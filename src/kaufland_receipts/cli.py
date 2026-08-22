@@ -12,6 +12,7 @@ from . import export as export_mod
 from .parse_pdf import parse_pdf
 from .store import ReceiptStore
 from .watch import DEFAULT_WATCH_DIR, scan_once
+from .web import build_site
 
 app = typer.Typer(
     add_completion=False,
@@ -125,6 +126,22 @@ def prices(output: Path = typer.Option(Path("prices.jsonl"), help="JSONL log to 
 def summary():
     """Print a monthly spending rollup (Markdown) for the me-brain vault."""
     typer.echo(export_mod.monthly_summary_markdown(_store().all()))
+
+
+@app.command()
+def web(
+    output: Path = typer.Option(Path("site"), help="Output directory for the static site."),
+):
+    """Build a static HTML site: receipt list, per-receipt details, per-item
+    price history, and a statistics page. Open <output>/index.html in a
+    browser, or serve it locally with e.g. `python3 -m http.server` inside it.
+    """
+    receipts = _store().all()
+    build_site(receipts, output)
+    typer.secho(
+        f"Built site with {len(receipts)} receipt(s) at {output}/index.html",
+        fg=typer.colors.GREEN,
+    )
 
 
 if __name__ == "__main__":
