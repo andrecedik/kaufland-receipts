@@ -28,6 +28,13 @@ class LineItem(BaseModel):
     tax_class: str | None = None  # Kaufland prints "A" (7%) or "B" (19%)
     article_number: str | None = None  # stable key for price history, if available
 
+    # Pack size / purchased weight, e.g. "750g" parsed out of the name, or the
+    # actual weight for a per-kg-priced item (same number as `quantity` there,
+    # kept explicit so a consumer never has to guess whether `quantity` is a
+    # count or a weight). `size_unit` is one of "g", "kg", "ml", "l".
+    size_value: Decimal | None = None
+    size_unit: str | None = None
+
 
 class Store(BaseModel):
     """The store a receipt was issued by."""

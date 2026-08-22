@@ -25,7 +25,12 @@ def _store() -> ReceiptStore:
 
 
 @app.command()
-def ingest(path: Path = typer.Argument(..., help="A receipt PDF, or a folder of them.")):
+def ingest(
+    path: Path = typer.Argument(..., help="A receipt PDF, or a folder of them."),
+    overwrite: bool = typer.Option(
+        False, help="Reparse and replace receipts already in the store (e.g. after a parser update)."
+    ),
+):
     """Parse one PDF (or every PDF in a folder) into the local store."""
     store = _store()
     pdfs = sorted(path.glob("*.pdf")) if path.is_dir() else [path]
@@ -37,7 +42,7 @@ def ingest(path: Path = typer.Argument(..., help="A receipt PDF, or a folder of 
             typer.secho(f"  ✗ {pdf.name}: {exc}", fg=typer.colors.RED)
             failed += 1
             continue
-        if store.save(receipt):
+        if store.save(receipt, overwrite=overwrite):
             reconciled = "✓" if receipt.totals_match() else "⚠ totals mismatch"
             typer.echo(f"  + {receipt.receipt_id}  ({receipt.total} EUR)  {reconciled}")
             added += 1

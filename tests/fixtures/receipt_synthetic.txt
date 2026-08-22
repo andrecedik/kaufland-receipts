@@ -4,18 +4,19 @@ You earned 20  points for this purchase.
                12345 Teststadt
                 DE000000000
                                  Preis EUR
-  Testartikel Eins                  2,00 B
+  Testartikel Eins 500g              2,00 B
   Testartikel Zwei 2 * 1,50         3,00 B
   Testkaese Gouda
    3 * 1,00                          3,00 B
   Testgemuese kg
    0,500 kg                          1,00 B
+  Testfrucht kg    0,300 kg           0,90 B
   K Card XTRA Rabatt               -0,50
   Pfandartikel                      0,25 A
-  Zwischensumme           8,75
+  Zwischensumme           9,65
   --------------Rabattaktion--------------
   K Card XTRA Rabatt               -0,75
-  Summe                             8,00
+  Summe                             8,90
   Kaufland Pay                      8,00
   Steuer %    Brutto     Netto    Steuer
   A 19,00%      0,25      0,21      0,04

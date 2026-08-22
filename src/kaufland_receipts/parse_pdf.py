@@ -53,8 +53,34 @@ _CONT_Q = re.compile(
     r"^(?P<qty>\d+)\s*\*\s*(?P<unit>\d+,\d{2})\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$"
 )
 _CONT_W = re.compile(r"^(?P<w>\d+,\d{3})\s*kg\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$")
+# Same weight-priced shape as _CONT_W, but with the name still on the same
+# line — pypdf occasionally merges the two logical rows for a weighed item
+# into one text line depending on column layout.
+_INLINE_W = re.compile(
+    r"^(?P<name>.+?)\s+(?P<w>\d+,\d{3})\s*kg\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$"
+)
 _SIMPLE = re.compile(r"^(?P<name>.+?)\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$")
 _DISCOUNT = re.compile(r"^(?P<name>K Card XTRA Rabatt)\s+(?P<amt>-\d+,\d{2})$")
+
+# A pack size embedded in the product name itself, e.g. "750g", "2,5kg",
+# "425ml" — the last such token in the name wins, since Kaufland prints it
+# right before (or as) the trailing qualifier.
+_SIZE_IN_NAME = re.compile(r"(?i)(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)(?!\w)")
+
+
+def _extract_size(name: str) -> tuple[Decimal | None, str | None]:
+    matches = list(_SIZE_IN_NAME.finditer(name))
+    if not matches:
+        return None, None
+    m = matches[-1]
+    return Decimal(m.group(1).replace(",", ".")), m.group(2).lower()
+
+
+def _size_for(name: str, *, weight: Decimal | None = None) -> tuple[Decimal | None, str | None]:
+    """Weight-priced lines are unambiguous — Kaufland only ever weighs in kg."""
+    if weight is not None:
+        return weight, "kg"
+    return _extract_size(name)
 
 _SUMME = re.compile(r"^Summe\s+(?P<amt>-?\d+,\d{2})$")
 _DATE = re.compile(r"Datum:\s*(\d{2})\.(\d{2})\.(\d{2,4})\s+Zeit:\s*(\d{2}):(\d{2}):(\d{2})")
@@ -124,33 +150,54 @@ def _parse_line_items(lines: list[str]) -> list[LineItem]:
             break
 
         if m := _DISCOUNT.match(ln):
-            items.append(LineItem(name=m["name"], total_price=_money(m["amt"])))
+            size_value, size_unit = _size_for(m["name"])
+            items.append(LineItem(
+                name=m["name"], total_price=_money(m["amt"]),
+                size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
         if m := _INLINE_Q.match(ln):
+            name = m["name"].strip()
+            size_value, size_unit = _size_for(name)
             items.append(LineItem(
-                name=m["name"].strip(), quantity=Decimal(m["qty"]),
+                name=name, quantity=Decimal(m["qty"]),
                 unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
-                tax_class=m["tax"]))
+                tax_class=m["tax"], size_value=size_value, size_unit=size_unit))
+            pending_name = None
+            continue
+        if m := _INLINE_W.match(ln):
+            name = m["name"].strip()
+            weight = _money(m["w"])
+            size_value, size_unit = _size_for(name, weight=weight)
+            items.append(LineItem(
+                name=name, quantity=weight, total_price=_money(m["amt"]),
+                tax_class=m["tax"], size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
         if (m := _CONT_Q.match(ln)) and pending_name:
+            size_value, size_unit = _size_for(pending_name)
             items.append(LineItem(
                 name=pending_name, quantity=Decimal(m["qty"]),
                 unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
-                tax_class=m["tax"]))
+                tax_class=m["tax"], size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
         if (m := _CONT_W.match(ln)) and pending_name:
+            weight = _money(m["w"])
+            size_value, size_unit = _size_for(pending_name, weight=weight)
             items.append(LineItem(
-                name=pending_name, quantity=_money(m["w"]),
-                total_price=_money(m["amt"]), tax_class=m["tax"]))
+                name=pending_name, quantity=weight,
+                total_price=_money(m["amt"]), tax_class=m["tax"],
+                size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
         if m := _SIMPLE.match(ln):
+            name = m["name"].strip()
+            size_value, size_unit = _size_for(name)
             items.append(LineItem(
-                name=m["name"].strip(), unit_price=_money(m["amt"]),
-                total_price=_money(m["amt"]), tax_class=m["tax"]))
+                name=name, unit_price=_money(m["amt"]),
+                total_price=_money(m["amt"]), tax_class=m["tax"],
+                size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
 

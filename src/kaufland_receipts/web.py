@@ -230,8 +230,13 @@ def _build_receipt_pages(receipts: list[Receipt], out_dir: Path) -> None:
         for li in _merge_duplicate_lines(r.line_items):
             item_link = f"items/{_esc(slugify(li.name))}.html"
             unit_cell = f"{li.unit_price:.2f} EUR" if li.unit_price is not None else "&ndash;"
+            size_note = (
+                f' <span class="badge">{li.size_value.normalize():f} {_esc(li.size_unit)}</span>'
+                if li.size_value is not None
+                else ""
+            )
             item_rows.append(
-                f'<tr><td><a href="../{item_link}">{_esc(li.name)}</a></td>'
+                f'<tr><td><a href="../{item_link}">{_esc(li.name)}</a>{size_note}</td>'
                 f'<td class="num">{li.quantity}</td>'
                 f'<td class="num">{unit_cell}</td>'
                 f'<td class="num">{li.total_price:.2f} EUR</td>'

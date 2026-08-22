@@ -18,8 +18,8 @@ FIXTURE = (Path(__file__).parent / "fixtures" / "receipt_synthetic.txt").read_te
 
 def test_fixture_reconciles():
     r = parse_text(FIXTURE)
-    assert r.total == Decimal("8.00")
-    assert r.line_item_sum() == Decimal("8.00")
+    assert r.total == Decimal("8.90")
+    assert r.line_item_sum() == Decimal("8.90")
     assert r.totals_match()
 
 
@@ -44,9 +44,22 @@ def test_line_shapes():
     # two-line weight
     assert items["Testgemuese kg"].quantity == Decimal("0.500")
     assert items["Testgemuese kg"].total_price == Decimal("1.00")
+    assert items["Testgemuese kg"].size_value == Decimal("0.500")
+    assert items["Testgemuese kg"].size_unit == "kg"
+    # single-line weight (name, weight and price all on one text line --
+    # pypdf occasionally merges the two logical rows this way)
+    assert items["Testfrucht kg"].quantity == Decimal("0.300")
+    assert items["Testfrucht kg"].total_price == Decimal("0.90")
+    assert items["Testfrucht kg"].size_value == Decimal("0.300")
+    assert items["Testfrucht kg"].size_unit == "kg"
+    # pack size embedded in the product name
+    assert items["Testartikel Eins 500g"].size_value == Decimal("500")
+    assert items["Testartikel Eins 500g"].size_unit == "g"
+    # names without a parseable size stay unset
+    assert items["Testartikel Zwei"].size_value is None
     # tax classes: A = 19%, B = 7%
     assert items["Pfandartikel"].tax_class == "A"
-    assert items["Testartikel Eins"].tax_class == "B"
+    assert items["Testartikel Eins 500g"].tax_class == "B"
 
 
 def test_discounts_are_negative_line_items():
