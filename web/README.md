@@ -8,12 +8,22 @@ React + TypeScript, output to `../site-b/`.
 
 ## Building
 
+Needs Node `^20.19.0 || >=22.12.0` (Vite 8's bundler, Rolldown, needs
+`node:util`'s `styleText` export, missing before Node 20.12). If you use
+nvm, `cd web && nvm use` picks up the pinned version in `.nvmrc`
+automatically. `npm run build`/`dev` check this themselves and fail with a
+clear message on an incompatible Node — otherwise the failure mode is a
+cryptic crash deep in `node_modules/rolldown` ("does not provide an export
+named 'styleText'"), which is what an old Node version left active in a
+shell (e.g. via nvm) looks like.
+
 ```sh
 # from the repo root — exports web/src/data/receipts.json and copies
 # source PDFs into web/public/pdfs/ from the local receipt store
 uv run kaufland web-b-data
 
 cd web
+nvm use       # if you use nvm — matches .nvmrc
 npm install   # first time only
 npm run build # writes ../site-b/
 ```
