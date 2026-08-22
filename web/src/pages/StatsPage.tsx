@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { fmtDateObj, fmtMonth, fmtMonthShort } from "@/lib/format"
 import { fmtMoney, monthlyTotals, trailingSpend } from "@/lib/receipts"
 
 const WINDOWS = [
@@ -24,7 +25,7 @@ export function StatsPage() {
   return (
     <>
       <h1 className="text-2xl font-bold">Statistics</h1>
-      <p className="mb-6 text-muted-foreground">Trailing spend as of {now.toISOString().slice(0, 10)}</p>
+      <p className="mb-6 text-muted-foreground">Trailing spend as of {fmtDateObj(now)}</p>
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {WINDOWS.map((w) => {
@@ -49,9 +50,9 @@ export function StatsPage() {
               <ChartContainer config={CHART_CONFIG} className="aspect-auto h-[240px] w-full">
                 <BarChart data={chartData}>
                   <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={fmtMonthShort} />
                   <ChartTooltip
-                    content={<ChartTooltipContent formatter={(value) => fmtMoney(Number(value))} />}
+                    content={<ChartTooltipContent labelFormatter={(value) => fmtMonth(String(value))} formatter={(value) => fmtMoney(Number(value))} />}
                   />
                   <Bar dataKey="total" fill="var(--color-total)" radius={4} />
                 </BarChart>
@@ -79,7 +80,7 @@ export function StatsPage() {
             )}
             {months.map((m, i) => (
               <TableRow key={m.month} className={i % 2 === 1 ? "bg-muted/60" : ""}>
-                <TableCell>{m.month}</TableCell>
+                <TableCell>{fmtMonth(m.month)}</TableCell>
                 <TableCell className="text-right tabular-nums">{m.count}</TableCell>
                 <TableCell className="text-right tabular-nums">{fmtMoney(m.total)}</TableCell>
               </TableRow>

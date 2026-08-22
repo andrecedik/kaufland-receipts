@@ -1,3 +1,5 @@
+import { fmtDate } from "@/lib/format"
+
 export interface SparklinePoint {
   date: string // YYYY-MM-DD
   price: number
@@ -38,7 +40,7 @@ export function Sparkline({ points, width = 600, height = 180 }: { points: Spark
       <polyline points={polyPoints} fill="none" stroke="var(--primary)" strokeWidth={2} />
       {points.map((p, i) => (
         <circle key={p.date + i} cx={coords[i].x} cy={coords[i].y} r={3.5} fill="var(--primary)">
-          <title>{`${p.date}: ${p.price.toFixed(2)} EUR`}</title>
+          <title>{`${fmtDate(p.date)}: ${p.price.toFixed(2)} EUR`}</title>
         </circle>
       ))}
       <text x={4} y={yOf(maxP)} fontSize={11} fill="var(--muted-foreground)">
@@ -51,15 +53,15 @@ export function Sparkline({ points, width = 600, height = 180 }: { points: Spark
         // Only one date in range -- a separate label at each end would just
         // print the same date twice.
         <text x={(padL + width - padR) / 2} y={height - 8} fontSize={11} fill="var(--muted-foreground)" textAnchor="middle">
-          {points[0].date}
+          {fmtDate(points[0].date)}
         </text>
       ) : (
         <>
           <text x={padL} y={height - 8} fontSize={11} fill="var(--muted-foreground)">
-            {points[0].date}
+            {fmtDate(points[0].date)}
           </text>
           <text x={width - padR} y={height - 8} fontSize={11} fill="var(--muted-foreground)" textAnchor="end">
-            {points[points.length - 1].date}
+            {fmtDate(points[points.length - 1].date)}
           </text>
         </>
       )}

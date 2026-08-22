@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom"
 import { Sparkline } from "@/components/Sparkline"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { fmtDate } from "@/lib/format"
+import { fmtDate, isoDate } from "@/lib/format"
 import { itemPriceHistory, num, slugify } from "@/lib/receipts"
 
 export function ItemPage() {
@@ -21,8 +21,10 @@ export function ItemPage() {
   }
 
   const [name, observations] = entry
+  // Chart data keeps a plain ISO date (sortable/parseable); display strings
+  // are formatted separately below.
   const points = observations.map((o) => ({
-    date: fmtDate(o.receipt.purchased_at),
+    date: isoDate(o.receipt.purchased_at),
     price: num(o.lineItem.unit_price),
   }))
   const first = points[0]
@@ -41,7 +43,7 @@ export function ItemPage() {
       {changed && (
         <p className="mb-4 text-muted-foreground">
           {delta > 0 ? "up" : "down"} from {first.price.toFixed(2)} to {last.price.toFixed(2)} EUR ({pct >= 0 ? "+" : ""}
-          {pct.toFixed(1)}%) between {first.date} and {last.date}
+          {pct.toFixed(1)}%) between {fmtDate(first.date)} and {fmtDate(last.date)}
         </p>
       )}
 
