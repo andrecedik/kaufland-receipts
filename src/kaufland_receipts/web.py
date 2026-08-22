@@ -115,6 +115,17 @@ def _merge_duplicate_lines(line_items: list[LineItem]) -> list[LineItem]:
     return merged
 
 
+# Kaufland Card XTRA loyalty discounts (see parse_pdf.py) — the only line
+# items that represent an actual saving. Pfand/Leergut refunds are also
+# negative line items but are money back for returned deposits, not savings,
+# so they're deliberately excluded here.
+_DISCOUNT_NAME = "K Card XTRA Rabatt"
+
+
+def _total_saved(line_items: list[LineItem]) -> Decimal:
+    return -sum((li.total_price for li in line_items if li.name == _DISCOUNT_NAME), Decimal(0))
+
+
 def slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-")
     return slug or "item"
@@ -201,8 +212,10 @@ def _svg_sparkline(points: list[tuple[date, Decimal]], *, width: int = 600, heig
 def _build_index(receipts: list[Receipt], out_dir: Path) -> None:
     rows = []
     grand_total = Decimal(0)
+    grand_saved = Decimal(0)
     for r in sorted(receipts, key=lambda r: r.purchased_at, reverse=True):
         grand_total += r.total
+        grand_saved += _total_saved(r.line_items)
         rows.append(
             f"<tr><td>{r.purchased_at:%Y-%m-%d %H:%M}</td>"
             f"<td>{_esc(r.store.name)}</td>"
@@ -211,7 +224,11 @@ def _build_index(receipts: list[Receipt], out_dir: Path) -> None:
             f'<td><a href="receipts/{_esc(r.receipt_id)}.html">Details</a></td></tr>'
         )
     body = f"""<h1>Kaufland Receipts</h1>
-<p class="subtitle">{len(receipts)} receipt(s) &middot; {_fmt_money(grand_total)} total</p>
+<p class="subtitle">{len(receipts)} receipt(s)</p>
+<div class="card-grid">
+<div class="card"><div class="label">Total saved</div><div class="value">{_fmt_money(grand_saved)}</div></div>
+<div class="card"><div class="label">Total spent</div><div class="value">{_fmt_money(grand_total)}</div></div>
+</div>
 <table>
 <thead><tr><th>Date</th><th>Store</th><th class="num">Items</th><th class="num">Total</th><th></th></tr></thead>
 <tbody>
@@ -267,7 +284,10 @@ def _build_receipt_pages(receipts: list[Receipt], out_dir: Path) -> None:
 <tbody>
 {''.join(item_rows)}
 </tbody>
-<tfoot><tr><td colspan="3">Total</td><td class="num">{_fmt_money(r.total, r.currency)}</td><td></td></tr></tfoot>
+<tfoot>
+<tr><td colspan="3">Total saved</td><td class="num">{_fmt_money(_total_saved(r.line_items), r.currency)}</td><td></td></tr>
+<tr><td colspan="3">Total</td><td class="num">{_fmt_money(r.total, r.currency)}</td><td></td></tr>
+</tfoot>
 </table>
 <p>{reconciled}</p>
 """
