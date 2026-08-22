@@ -5,8 +5,10 @@ import { ReceiptDetailPage } from "@/pages/ReceiptDetailPage"
 import { ItemPage } from "@/pages/ItemPage"
 import { StatsPage } from "@/pages/StatsPage"
 
-// HashRouter (not BrowserRouter) so the built site opens straight from disk
-// via file:// -- same requirement as the plain-HTML site/, no server needed.
+// HashRouter (not BrowserRouter) so routes work without server-side rewrite
+// rules -- but this alone does NOT make the build openable via file://; see
+// web/README.md for why (Chrome blocks ES module <script> tags on that
+// origin), unlike the plain-HTML site/, which needs no server at all.
 function App() {
   return (
     <HashRouter>
