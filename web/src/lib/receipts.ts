@@ -1,3 +1,4 @@
+import { fmtDateTime } from "@/lib/format"
 import type { LineItem, Receipt } from "@/lib/types"
 
 // Fetched at runtime from public/data/receipts.json rather than imported as
@@ -84,6 +85,42 @@ export function totalsMatch(receipt: Receipt): boolean {
   return Math.abs(lineItemSum(receipt) - num(receipt.total)) < 0.005
 }
 
+export type ReceiptSortKey = "date" | "store" | "items" | "total"
+
+/** Powers ReceiptsPage's search box + sortable column headers: a
+ * case-insensitive substring match against store name, receipt id, or
+ * formatted date, then a sort by the requested column/direction. */
+export function filterAndSortReceipts(
+  allReceipts: Receipt[],
+  query: string,
+  sortKey: ReceiptSortKey,
+  sortDir: "asc" | "desc",
+): Receipt[] {
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? allReceipts.filter(
+        (r) =>
+          r.store.name.toLowerCase().includes(q) ||
+          r.receipt_id.toLowerCase().includes(q) ||
+          fmtDateTime(r.purchased_at).toLowerCase().includes(q),
+      )
+    : allReceipts
+
+  const dir = sortDir === "asc" ? 1 : -1
+  return [...filtered].sort((a, b) => {
+    switch (sortKey) {
+      case "date":
+        return dir * a.purchased_at.localeCompare(b.purchased_at)
+      case "store":
+        return dir * a.store.name.localeCompare(b.store.name)
+      case "items":
+        return dir * (a.line_items.length - b.line_items.length)
+      case "total":
+        return dir * (num(a.total) - num(b.total))
+    }
+  })
+}
+
 export interface ItemObservation {
   receipt: Receipt
   lineItem: LineItem
@@ -112,7 +149,8 @@ let cachedItemSlugs: Map<string, string> | null = null
  * name in itemPriceHistory(). Plain slugify() can collide (e.g. two names
  * differing only by punctuation or an umlaut); this appends -2, -3, ... to
  * any name whose base slug is already taken, so distinct items never share
- * a route. `receipts` is static import data, so this is safe to cache.
+ * a route. `receipts` is loaded once via loadReceipts() before the app
+ * renders and never changes afterward, so this is safe to cache.
  */
 export function itemSlugs(): Map<string, string> {
   if (cachedItemSlugs) return cachedItemSlugs

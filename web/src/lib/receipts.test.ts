@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { mergeDuplicateLines, totalSaved, totalsMatch } from "@/lib/receipts"
+import { filterAndSortReceipts, mergeDuplicateLines, totalSaved, totalsMatch } from "@/lib/receipts"
 import type { LineItem, Receipt, Store } from "@/lib/types"
 
 const STORE: Store = { name: "Kaufland Test", street: null, city: null, postal_code: null }
@@ -104,5 +104,74 @@ describe("totalsMatch", () => {
   it("is false clearly beyond the 0.005 tolerance", () => {
     const r = receipt({ total: "1.00", line_items: [lineItem({ total_price: "1.006" })] })
     expect(totalsMatch(r)).toBe(false)
+  })
+})
+
+describe("filterAndSortReceipts", () => {
+  const receiptsList: Receipt[] = [
+    receipt({
+      receipt_id: "kaufland-1-1-20260601-100",
+      purchased_at: "2026-06-01T09:00:00",
+      store: { ...STORE, name: "Kaufland Teststadt" },
+      total: "10.00",
+      line_items: [lineItem({}), lineItem({})],
+    }),
+    receipt({
+      receipt_id: "kaufland-2-1-20260815-200",
+      purchased_at: "2026-08-15T09:00:00",
+      store: { ...STORE, name: "Kaufland Zweitstadt" },
+      total: "30.00",
+      line_items: [lineItem({})],
+    }),
+    receipt({
+      receipt_id: "kaufland-1-1-20260701-300",
+      purchased_at: "2026-07-01T09:00:00",
+      store: { ...STORE, name: "Kaufland Teststadt" },
+      total: "20.00",
+      line_items: [lineItem({}), lineItem({}), lineItem({})],
+    }),
+  ]
+
+  it("with no query, keeps every receipt", () => {
+    expect(filterAndSortReceipts(receiptsList, "", "date", "desc")).toHaveLength(3)
+  })
+
+  it("filters by store name, case-insensitively", () => {
+    const rows = filterAndSortReceipts(receiptsList, "zweitstadt", "date", "desc")
+    expect(rows.map((r) => r.receipt_id)).toEqual(["kaufland-2-1-20260815-200"])
+  })
+
+  it("filters by receipt id substring", () => {
+    const rows = filterAndSortReceipts(receiptsList, "20260701", "date", "desc")
+    expect(rows.map((r) => r.receipt_id)).toEqual(["kaufland-1-1-20260701-300"])
+  })
+
+  it("filters by formatted date", () => {
+    const rows = filterAndSortReceipts(receiptsList, "1 Jun 2026", "date", "desc")
+    expect(rows.map((r) => r.receipt_id)).toEqual(["kaufland-1-1-20260601-100"])
+  })
+
+  it("sorts by date", () => {
+    const asc = filterAndSortReceipts(receiptsList, "", "date", "asc")
+    expect(asc.map((r) => r.receipt_id)).toEqual([
+      "kaufland-1-1-20260601-100",
+      "kaufland-1-1-20260701-300",
+      "kaufland-2-1-20260815-200",
+    ])
+  })
+
+  it("sorts by store name", () => {
+    const asc = filterAndSortReceipts(receiptsList, "", "store", "asc")
+    expect(asc.map((r) => r.store.name)).toEqual(["Kaufland Teststadt", "Kaufland Teststadt", "Kaufland Zweitstadt"])
+  })
+
+  it("sorts by item count", () => {
+    const asc = filterAndSortReceipts(receiptsList, "", "items", "asc")
+    expect(asc.map((r) => r.line_items.length)).toEqual([1, 2, 3])
+  })
+
+  it("sorts by total, descending", () => {
+    const desc = filterAndSortReceipts(receiptsList, "", "total", "desc")
+    expect(desc.map((r) => r.total)).toEqual(["30.00", "20.00", "10.00"])
   })
 })

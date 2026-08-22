@@ -8,7 +8,7 @@ function systemPrefersDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
 }
 
-function currentTheme(): "light" | "dark" {
+export function currentTheme(): "light" | "dark" {
   const stored = localStorage.getItem(KEY)
   if (stored === "light" || stored === "dark") return stored
   return systemPrefersDark() ? "dark" : "light"

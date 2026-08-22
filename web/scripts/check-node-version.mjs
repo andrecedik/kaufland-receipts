@@ -7,13 +7,19 @@
 // every `npm run dev`/`build`/`preview` (not just `npm install`), since
 // `engine-strict` in .npmrc does not reliably catch a Node version that
 // changed *after* install (e.g. switched via nvm in a later shell).
-const REQUIRED = "^20.19.0 || >=22.12.0" // must match package.json "engines".node
+export const REQUIRED = "^20.19.0 || >=22.12.0" // must match package.json "engines".node
 
-const [major, minor] = process.versions.node.split(".").map(Number)
-const ok = (major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major > 22
+export function isSupportedNodeVersion(major, minor) {
+  return (major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major > 22
+}
 
-if (!ok) {
-  console.error(`\nThis project needs Node ${REQUIRED}, found ${process.version}.`)
-  console.error(`\nFix: cd web && nvm use   (reads web/.nvmrc)\n`)
-  process.exit(1)
+// Only runs the check (and exits) when executed directly, not when imported
+// by the test suite below.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const [major, minor] = process.versions.node.split(".").map(Number)
+  if (!isSupportedNodeVersion(major, minor)) {
+    console.error(`\nThis project needs Node ${REQUIRED}, found ${process.version}.`)
+    console.error(`\nFix: cd web && nvm use   (reads web/.nvmrc)\n`)
+    process.exit(1)
+  }
 }
