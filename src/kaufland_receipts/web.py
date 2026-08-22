@@ -84,6 +84,37 @@ tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom:
 """
 
 
+def _merge_duplicate_lines(line_items: list[LineItem]) -> list[LineItem]:
+    """Combine lines with the same name and unit price into one, summing quantity.
+
+    Kaufland receipts print separate lines for repeated pickups of the same
+    article at the same price rather than bumping the quantity themselves;
+    merging those back is unambiguous. Lines without a unit price (loyalty
+    discounts, weight-priced items) are left as-is.
+    """
+    merged: list[LineItem] = []
+    index: dict[tuple[str, Decimal], int] = {}
+    for li in line_items:
+        if li.unit_price is None:
+            merged.append(li)
+            continue
+        key = (li.name, li.unit_price)
+        if key in index:
+            existing = merged[index[key]]
+            new_qty = existing.quantity + li.quantity
+            merged[index[key]] = existing.model_copy(
+                update={
+                    "quantity": new_qty,
+                    "total_price": existing.unit_price * new_qty,
+                    "article_number": existing.article_number or li.article_number,
+                }
+            )
+        else:
+            index[key] = len(merged)
+            merged.append(li)
+    return merged
+
+
 def slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-")
     return slug or "item"
@@ -196,7 +227,7 @@ def _build_receipt_pages(receipts: list[Receipt], out_dir: Path) -> None:
     receipts_dir.mkdir(parents=True, exist_ok=True)
     for r in receipts:
         item_rows = []
-        for li in r.line_items:
+        for li in _merge_duplicate_lines(r.line_items):
             item_link = f"items/{_esc(slugify(li.name))}.html"
             unit_cell = f"{li.unit_price:.2f} EUR" if li.unit_price is not None else "&ndash;"
             item_rows.append(
@@ -239,7 +270,7 @@ def _build_item_pages(receipts: list[Receipt], out_dir: Path) -> None:
 
     by_name: dict[str, list[tuple[Receipt, LineItem]]] = defaultdict(list)
     for r in receipts:
-        for li in r.line_items:
+        for li in _merge_duplicate_lines(r.line_items):
             if li.unit_price is None or li.total_price < 0:
                 continue
             by_name[li.name].append((r, li))
