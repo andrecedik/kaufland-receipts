@@ -47,12 +47,22 @@ export function Sparkline({ points, width = 600, height = 180 }: { points: Spark
       <text x={4} y={yOf(minP)} fontSize={11} fill="var(--muted-foreground)">
         {minP.toFixed(2)}
       </text>
-      <text x={padL} y={height - 8} fontSize={11} fill="var(--muted-foreground)">
-        {points[0].date}
-      </text>
-      <text x={width - padR} y={height - 8} fontSize={11} fill="var(--muted-foreground)" textAnchor="end">
-        {points[points.length - 1].date}
-      </text>
+      {minD === maxD ? (
+        // Only one date in range -- a separate label at each end would just
+        // print the same date twice.
+        <text x={(padL + width - padR) / 2} y={height - 8} fontSize={11} fill="var(--muted-foreground)" textAnchor="middle">
+          {points[0].date}
+        </text>
+      ) : (
+        <>
+          <text x={padL} y={height - 8} fontSize={11} fill="var(--muted-foreground)">
+            {points[0].date}
+          </text>
+          <text x={width - padR} y={height - 8} fontSize={11} fill="var(--muted-foreground)" textAnchor="end">
+            {points[points.length - 1].date}
+          </text>
+        </>
+      )}
     </svg>
   )
 }

@@ -302,16 +302,24 @@ def _svg_sparkline(points: list[tuple[date, Decimal]], *, width: int = 600, heig
 
     y_min_label = f'<text x="4" y="{y_of(max_p):.1f}" font-size="11" fill="var(--muted)">{max_p:.2f}</text>'
     y_max_label = f'<text x="4" y="{y_of(min_p):.1f}" font-size="11" fill="var(--muted)">{min_p:.2f}</text>'
-    x_min_label = f'<text x="{pad_l}" y="{height - 8}" font-size="11" fill="var(--muted)">{min_d.isoformat()}</text>'
-    x_max_label = (
-        f'<text x="{width - pad_r}" y="{height - 8}" font-size="11" '
-        f'fill="var(--muted)" text-anchor="end">{max_d.isoformat()}</text>'
-    )
+    if min_d == max_d:
+        # Only one date in range -- a separate label at each end would just
+        # print the same date twice.
+        x_labels = (
+            f'<text x="{(pad_l + width - pad_r) / 2:.1f}" y="{height - 8}" font-size="11" '
+            f'fill="var(--muted)" text-anchor="middle">{min_d.isoformat()}</text>'
+        )
+    else:
+        x_labels = (
+            f'<text x="{pad_l}" y="{height - 8}" font-size="11" fill="var(--muted)">{min_d.isoformat()}</text>'
+            f'<text x="{width - pad_r}" y="{height - 8}" font-size="11" '
+            f'fill="var(--muted)" text-anchor="end">{max_d.isoformat()}</text>'
+        )
 
     return f"""<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">
 <polyline points="{poly}" fill="none" stroke="var(--accent)" stroke-width="2"/>
 {''.join(circles)}
-{y_min_label}{y_max_label}{x_min_label}{x_max_label}
+{y_min_label}{y_max_label}{x_labels}
 </svg>"""
 
 
