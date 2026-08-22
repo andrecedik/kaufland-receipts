@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from kaufland_receipts.parse_pdf import parse_text
+from kaufland_receipts.parse_pdf import is_kaufland, parse_text
 
 FIXTURE = (Path(__file__).parent / "fixtures" / "receipt_synthetic.txt").read_text("utf-8")
 
@@ -85,3 +85,19 @@ def test_refund_is_not_a_discount():
 def test_rejects_non_kaufland():
     with pytest.raises(ValueError):
         parse_text("Some other shop\nSumme 5,00\nDatum:01.01.26 Zeit: 10:00:00 Bon:1")
+
+
+def test_is_kaufland_when_the_word_only_appears_in_the_footer():
+    # Real bug: on a receipt with no "saved ... with Kaufland Card" loyalty
+    # line and no "Kaufland - " prefix on the store line (both optional --
+    # absent when no card discount applied that trip), the word "Kaufland"
+    # doesn't appear until the payment footer ("Kaufland Card XTRA:" /
+    # "Kaufland DE <Filiale>"), which a longer item list pushes past any
+    # fixed leading-line cutoff. A real 22-item receipt hit this and was
+    # wrongly rejected as "not a Kaufland receipt".
+    text = "\n".join(
+        ["Teststraße 1", "12345 Teststadt", "Tel. 01234/567890", "DE000000000"]
+        + [f"  Item {i}       1,00 B" for i in range(20)]
+        + ["  Kaufland Card XTRA:          xxxxx0000"]
+    )
+    assert is_kaufland(text)

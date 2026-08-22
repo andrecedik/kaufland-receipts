@@ -109,8 +109,12 @@ _POSTAL_CITY = re.compile(r"^(?P<plz>\d{5})\s+(?P<city>.+)$")
 
 
 def is_kaufland(text: str) -> bool:
-    head = "\n".join(text.splitlines()[:15])
-    return "kaufland" in head.lower()
+    # Scans the whole receipt, not just a leading window: the "Kaufland - "
+    # store-line prefix and the "saved ... with Kaufland Card" loyalty line
+    # are both optional (e.g. absent when no card discount applied that
+    # trip), and on a longer receipt the payment footer's "Kaufland Card
+    # XTRA:" / "Kaufland DE <Filiale>" lines can land 30+ lines in.
+    return "kaufland" in text.lower()
 
 
 def _parse_store(lines: list[str]) -> Store:
