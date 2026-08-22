@@ -31,25 +31,30 @@ from .models import LineItem, Receipt
 STYLE_CSS = """\
 :root {
   color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --border: #e0e0e0;
-  --accent: #1a6bdb;
-  --row-alt: #f7f7f8;
-  --row-hover: #eef0f3;
-  --thead-bg: #2b2d36;
-  --thead-fg: #f2f2f2;
+  --bg: #fbf7f2;
+  --fg: #2b211b;
+  --muted: #7a6656;
+  --border: #e7ddd1;
+  --accent: #a6491e;
+  --row-alt: #f4ebe1;
+  --row-hover: #eedfcf;
+  --thead-bg: #3b2a20;
+  --thead-fg: #f6ecdf;
+  --match: #5b7a3f;
+  --mismatch: #a8452f;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16181c;
-    --fg: #e8e8e8;
-    --muted: #9a9a9a;
-    --border: #33363b;
-    --accent: #6fa8ff;
-    --row-alt: #1d2024;
-    --row-hover: #262a30;
+    --bg: #201812;
+    --fg: #f2e9dd;
+    --muted: #b7a28c;
+    --border: #3e322a;
+    --accent: #e28743;
+    --row-alt: #2a2019;
+    --row-hover: #34281f;
+    --thead-bg: #4a362a;
+    --match: #8fb86b;
+    --mismatch: #e0785d;
   }
 }
 * { box-sizing: border-box; }
@@ -93,8 +98,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tfoot td { font-weight: 700; }
 tfoot tr:first-child td { border-top: 2px solid var(--border); padding-top: 0.85rem; }
 .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 1rem; font-size: 0.75rem; background: var(--row-alt); color: var(--muted); }
-.mismatch { color: #c0392b; font-weight: 600; }
-.match { color: #2e8b57; }
+.mismatch { color: var(--mismatch); font-weight: 600; }
+.match { color: var(--match); }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1rem 0 2rem; }
 .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
 .card .value { font-size: 1.4rem; font-weight: 700; }
