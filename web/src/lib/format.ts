@@ -2,7 +2,7 @@
 // hand into a local Date rather than via `new Date(iso)`, which would treat
 // a bare "YYYY-MM-DD" as UTC midnight and could shift the displayed date by
 // one day depending on the viewer's timezone.
-function parseLocal(iso: string): Date {
+export function parseLocal(iso: string): Date {
   const [datePart, timePart] = iso.split("T")
   const [y, m, d] = datePart.split("-").map(Number)
   const [hh, mm] = (timePart ?? "00:00").split(":").map(Number)
