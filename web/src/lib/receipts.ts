@@ -95,6 +95,49 @@ export function itemPriceHistory(): Map<string, ItemObservation[]> {
   return byName
 }
 
+let cachedItemSlugs: Map<string, string> | null = null
+
+/**
+ * Deterministic name -> URL slug map for item pages, built once over every
+ * name in itemPriceHistory(). Plain slugify() can collide (e.g. two names
+ * differing only by punctuation or an umlaut); this appends -2, -3, ... to
+ * any name whose base slug is already taken, so distinct items never share
+ * a route. `receipts` is static import data, so this is safe to cache.
+ */
+export function itemSlugs(): Map<string, string> {
+  if (cachedItemSlugs) return cachedItemSlugs
+  const names = Array.from(itemPriceHistory().keys()).sort((a, b) => a.localeCompare(b))
+  const map = new Map<string, string>()
+  const used = new Set<string>()
+  for (const name of names) {
+    let slug = slugify(name)
+    if (used.has(slug)) {
+      let n = 2
+      while (used.has(`${slug}-${n}`)) n++
+      slug = `${slug}-${n}`
+    }
+    used.add(slug)
+    map.set(name, slug)
+  }
+  cachedItemSlugs = map
+  return map
+}
+
+/** Slug for an item link. Falls back to plain slugify() for a name with no
+ * price-history entry (e.g. a refund/discount-only line) -- that slug won't
+ * resolve via itemNameForSlug either, matching today's "no price history
+ * for this item" behavior rather than producing a literal "undefined". */
+export function itemSlug(name: string): string {
+  return itemSlugs().get(name) ?? slugify(name)
+}
+
+export function itemNameForSlug(slug: string): string | undefined {
+  for (const [name, s] of itemSlugs()) {
+    if (s === slug) return name
+  }
+  return undefined
+}
+
 export function monthlyTotals(): { month: string; count: number; total: number }[] {
   const byMonth = new Map<string, { count: number; total: number }>()
   for (const r of receipts) {

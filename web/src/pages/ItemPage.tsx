@@ -2,14 +2,15 @@ import { Link, useParams } from "react-router-dom"
 import { Sparkline } from "@/components/Sparkline"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDate, isoDate } from "@/lib/format"
-import { itemPriceHistory, num, slugify } from "@/lib/receipts"
+import { itemNameForSlug, itemPriceHistory, num } from "@/lib/receipts"
 
 export function ItemPage() {
   const { slug } = useParams<{ slug: string }>()
   const byName = itemPriceHistory()
-  const entry = Array.from(byName.entries()).find(([name]) => slugify(name) === slug)
+  const name = slug ? itemNameForSlug(slug) : undefined
+  const observations = name ? byName.get(name) : undefined
 
-  if (!entry) {
+  if (!name || !observations) {
     return (
       <>
         <Link to="/" className="mb-4 inline-block text-primary hover:underline">
@@ -20,7 +21,6 @@ export function ItemPage() {
     )
   }
 
-  const [name, observations] = entry
   // Chart data keeps a plain ISO date (sortable/parseable); display strings
   // are formatted separately below.
   const points = observations.map((o) => ({

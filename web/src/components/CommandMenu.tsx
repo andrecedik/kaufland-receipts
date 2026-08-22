@@ -12,7 +12,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { fmtDateTime } from "@/lib/format"
-import { fmtMoney, itemPriceHistory, num, receipts, slugify } from "@/lib/receipts"
+import { fmtMoney, itemPriceHistory, itemSlug, num, receipts } from "@/lib/receipts"
 
 /** Global Cmd+K / Ctrl+K quick-jump to any receipt, item, or page. */
 export function CommandMenu() {
@@ -77,7 +77,7 @@ export function CommandMenu() {
             <CommandSeparator />
             <CommandGroup heading="Items">
               {itemNames.map((name) => (
-                <CommandItem key={name} value={name} onSelect={() => go(`/items/${slugify(name)}`)}>
+                <CommandItem key={name} value={name} onSelect={() => go(`/items/${itemSlug(name)}`)}>
                   {name}
                 </CommandItem>
               ))}

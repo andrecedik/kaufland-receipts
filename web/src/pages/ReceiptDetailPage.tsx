@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
-import { fmtMoney, lineItemSum, mergeDuplicateLines, num, receipts, slugify, totalSaved, totalsMatch } from "@/lib/receipts"
+import { fmtMoney, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
 
 export function ReceiptDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -61,7 +61,7 @@ export function ReceiptDetailPage() {
             {merged.map((li, i) => (
               <TableRow key={li.name + li.unit_price + i} className={i % 2 === 1 ? "bg-muted/60" : ""}>
                 <TableCell>
-                  <Link to={`/items/${slugify(li.name)}`} className="text-primary hover:underline">
+                  <Link to={`/items/${itemSlug(li.name)}`} className="text-primary hover:underline">
                     {li.name}
                   </Link>
                   {li.size_value !== null && (
