@@ -13,10 +13,13 @@ every sample. Notable Kaufland specifics:
   quantity (``NAME  Q * UNIT  TOTAL TAX``), two-line quantity (name on its own
   line, ``Q * UNIT  TOTAL TAX`` on the next) and two-line weight
   (``W,WWW kg  TOTAL TAX`` on the next line).
-* ``K Card XTRA Rabatt`` lines (negative, no tax letter) are loyalty discounts;
-  they are kept as negative line items so the receipt reconciles. A final
-  discount can also appear in a ``Rabattaktion`` block between ``Zwischensumme``
-  and ``Summe``.
+* Discount lines (negative, no tax letter — e.g. ``K Card XTRA Rabatt``,
+  ``Mengenrabatt``, ``Artikelrabatt``) are kept as negative line items so the
+  receipt reconciles. A final discount can also appear in a ``Rabattaktion``
+  block between ``Zwischensumme`` and ``Summe``.
+* The printed ``qty * unit`` price is always unsigned, even on a refund line
+  (e.g. a Leergut/Pfand return priced per item); the sign is inferred from
+  the line total instead.
 """
 
 from __future__ import annotations
@@ -36,6 +39,16 @@ TAX_RATES = {"A": Decimal("0.19"), "B": Decimal("0.07")}
 def _money(raw: str) -> Decimal:
     """German number format -> Decimal. '103,62' -> Decimal('103.62')."""
     return Decimal(raw.replace(".", "").replace(",", "."))
+
+
+def _signed_unit_price(unit_raw: str, total: Decimal) -> Decimal:
+    """The 'qty * unit' field is always printed unsigned, even on refund
+    lines like Pfand/Leergut returns, where the line total is negative
+    (e.g. "Leergut Mopro  2 * 0,25  -0,50 B" — 0,25 per bottle deposit,
+    -0,50 total). Flip the sign to match the total so unit_price * quantity
+    reconciles."""
+    unit = _money(unit_raw)
+    return -unit if total < 0 < unit else unit
 
 
 def extract_text(pdf_path: Path) -> str:
@@ -60,7 +73,13 @@ _INLINE_W = re.compile(
     r"^(?P<name>.+?)\s+(?P<w>\d+,\d{3})\s*kg\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$"
 )
 _SIMPLE = re.compile(r"^(?P<name>.+?)\s+(?P<amt>-?\d+,\d{2})\s+(?P<tax>[AB])$")
-_DISCOUNT = re.compile(r"^(?P<name>K Card XTRA Rabatt)\s+(?P<amt>-\d+,\d{2})$")
+# Any discount line — "K Card XTRA Rabatt" (loyalty), "Mengenrabatt" (bulk
+# quantity discount), "Artikelrabatt" (the Rabattaktion block's promo
+# discount), and presumably others not yet seen. All share the same shape:
+# name, negative amount, and — unlike every product/refund line — no
+# trailing tax letter, which is what distinguishes a discount from a Pfand/
+# Leergut refund (always negative *with* a tax letter).
+_DISCOUNT = re.compile(r"^(?P<name>.+?)\s+(?P<amt>-\d+,\d{2})$")
 
 # A pack size embedded in the product name itself, e.g. "750g", "2,5kg",
 # "425ml" — the last such token in the name wins, since Kaufland prints it
@@ -132,8 +151,8 @@ def _receipt_id(text: str, purchased_at: datetime) -> str:
 def _parse_line_items(lines: list[str]) -> list[LineItem]:
     """Walk the body between the 'Preis EUR' header and 'Summe'.
 
-    Products are captured at their printed price; ``K Card XTRA Rabatt`` lines are
-    captured as negative line items. This is what makes the line-item sum
+    Products are captured at their printed price; discount lines (see
+    ``_DISCOUNT``) are captured as negative line items. This is what makes the line-item sum
     reconcile to the printed total.
     """
     items: list[LineItem] = []
@@ -158,10 +177,11 @@ def _parse_line_items(lines: list[str]) -> list[LineItem]:
             continue
         if m := _INLINE_Q.match(ln):
             name = m["name"].strip()
+            total = _money(m["amt"])
             size_value, size_unit = _size_for(name)
             items.append(LineItem(
                 name=name, quantity=Decimal(m["qty"]),
-                unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
+                unit_price=_signed_unit_price(m["unit"], total), total_price=total,
                 tax_class=m["tax"], size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue
@@ -175,10 +195,11 @@ def _parse_line_items(lines: list[str]) -> list[LineItem]:
             pending_name = None
             continue
         if (m := _CONT_Q.match(ln)) and pending_name:
+            total = _money(m["amt"])
             size_value, size_unit = _size_for(pending_name)
             items.append(LineItem(
                 name=pending_name, quantity=Decimal(m["qty"]),
-                unit_price=_money(m["unit"]), total_price=_money(m["amt"]),
+                unit_price=_signed_unit_price(m["unit"], total), total_price=total,
                 tax_class=m["tax"], size_value=size_value, size_unit=size_unit))
             pending_name = None
             continue

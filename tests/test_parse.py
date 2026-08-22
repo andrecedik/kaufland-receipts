@@ -2,9 +2,10 @@
 
 The fixture (``fixtures/receipt_synthetic.txt``) carries no personal data but
 exercises every line shape: simple, inline-quantity, two-line quantity, two-line
-weight, a per-item loyalty discount, a Pfand line, and a final Rabattaktion
-discount. If the parser survives all of these and still reconciles to the printed
-total, the format logic is sound."""
+weight, single-line weight, a per-unit Leergut refund, a per-item loyalty
+discount, a Mengenrabatt, a Pfand line, and a final Rabattaktion discount. If
+the parser survives all of these and still reconciles to the printed total,
+the format logic is sound."""
 
 from decimal import Decimal
 from pathlib import Path
@@ -18,8 +19,8 @@ FIXTURE = (Path(__file__).parent / "fixtures" / "receipt_synthetic.txt").read_te
 
 def test_fixture_reconciles():
     r = parse_text(FIXTURE)
-    assert r.total == Decimal("8.90")
-    assert r.line_item_sum() == Decimal("8.90")
+    assert r.total == Decimal("8.20")
+    assert r.line_item_sum() == Decimal("8.20")
     assert r.totals_match()
 
 
@@ -60,12 +61,25 @@ def test_line_shapes():
     # tax classes: A = 19%, B = 7%
     assert items["Pfandartikel"].tax_class == "A"
     assert items["Testartikel Eins 500g"].tax_class == "B"
+    # a Leergut-style refund priced per unit -- the printed unit price is
+    # unsigned even though the line total is negative; the parser must flip it
+    assert items["Testleergut"].quantity == Decimal("2")
+    assert items["Testleergut"].unit_price == Decimal("-0.25")
+    assert items["Testleergut"].total_price == Decimal("-0.50")
 
 
 def test_discounts_are_negative_line_items():
-    discounts = [li for li in parse_text(FIXTURE).line_items if li.total_price < 0]
-    assert len(discounts) == 2  # per-item + Rabattaktion
-    assert all(li.name == "K Card XTRA Rabatt" for li in discounts)
+    discounts = [li for li in parse_text(FIXTURE).line_items if li.tax_class is None]
+    assert len(discounts) == 3  # per-item Rabatt, Mengenrabatt, Rabattaktion
+    assert all(li.total_price < 0 for li in discounts)
+    assert {li.name for li in discounts} == {"K Card XTRA Rabatt", "Mengenrabatt"}
+
+
+def test_refund_is_not_a_discount():
+    # Testleergut has a negative total but carries a tax class, so it must
+    # not be picked up by the (name-agnostic) discount pattern.
+    items = {li.name: li for li in parse_text(FIXTURE).line_items}
+    assert items["Testleergut"].tax_class == "B"
 
 
 def test_rejects_non_kaufland():

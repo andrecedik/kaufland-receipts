@@ -11,12 +11,14 @@ You earned 20  points for this purchase.
   Testgemuese kg
    0,500 kg                          1,00 B
   Testfrucht kg    0,300 kg           0,90 B
+  Testleergut      2 * 0,25          -0,50 B
+  Mengenrabatt                      -0,20
   K Card XTRA Rabatt               -0,50
   Pfandartikel                      0,25 A
-  Zwischensumme           9,65
+  Zwischensumme           8,95
   --------------Rabattaktion--------------
   K Card XTRA Rabatt               -0,75
-  Summe                             8,90
+  Summe                             8,20
   Kaufland Pay                      8,00
   Steuer %    Brutto     Netto    Steuer
   A 19,00%      0,25      0,21      0,04

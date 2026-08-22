@@ -115,15 +115,19 @@ def _merge_duplicate_lines(line_items: list[LineItem]) -> list[LineItem]:
     return merged
 
 
-# Kaufland Card XTRA loyalty discounts (see parse_pdf.py) — the only line
-# items that represent an actual saving. Pfand/Leergut refunds are also
-# negative line items but are money back for returned deposits, not savings,
-# so they're deliberately excluded here.
-_DISCOUNT_NAME = "K Card XTRA Rabatt"
-
-
 def _total_saved(line_items: list[LineItem]) -> Decimal:
-    return -sum((li.total_price for li in line_items if li.name == _DISCOUNT_NAME), Decimal(0))
+    """Sum of discount lines: K Card XTRA Rabatt, Mengenrabatt, Artikelrabatt,
+    and any other discount type Kaufland prints in that shape.
+
+    Discounts are negative line items with no tax class (see ``_DISCOUNT`` in
+    parse_pdf.py); that's what distinguishes them from Pfand/Leergut refunds,
+    which are also negative but always carry a tax class and are money back
+    for a returned deposit, not a saving.
+    """
+    return -sum(
+        (li.total_price for li in line_items if li.total_price < 0 and li.tax_class is None),
+        Decimal(0),
+    )
 
 
 def slugify(text: str) -> str:
