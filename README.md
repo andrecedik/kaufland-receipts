@@ -66,11 +66,14 @@ plain HTML/CSS, output to `site-b/`:
 ```sh
 uv run kaufland web-b-data   # export receipts.json + copy PDFs for web/
 cd web && npm install && npm run build
+npm run preview               # view it — prints a local URL to open
 ```
 
-Unlike `site/`, `site-b/` needs a local static server (`python3 -m
-http.server` inside it) — it can't be opened via `file://`, since Chrome
-blocks ES module scripts under that origin. See [`web/README.md`](web/README.md).
+Unlike `site/`, `site-b/` needs a local server — it can't be opened via
+`file://`, since Chrome blocks ES module scripts under that origin.
+`npm run preview` (from `web/`) is the easiest way to view it; see
+[`web/README.md`](web/README.md) for the alternative of serving `site-b/`
+directly, and the directory mix-up to avoid there.
 
 ## Status
 

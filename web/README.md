@@ -34,10 +34,25 @@ Unlike `site/`, this **must be served over HTTP** — it can't be opened
 directly via `file://`. Vite's build output uses native ES module
 `<script type="module">` tags, and Chrome (and other browsers) refuse to
 load those under the `file://` origin (a CORS restriction, not a bug in
-this project). Serve it with anything static, e.g.:
+this project).
+
+Easiest: Vite's own preview server, run from `web/` right after `npm run
+build` — no `cd` to get wrong:
 
 ```sh
-cd ../site-b
+cd web
+npm run preview
+# open the URL it prints (usually http://localhost:4173)
+```
+
+Or serve the `site-b/` output directly with anything static — **note the
+directory**: it's `site-b/`, not `web/` (which holds the unbuilt Vite
+source; serving *that* also loads without error but renders a blank page,
+since a plain static server can't process `web/index.html`'s
+`<script type="module" src="/src/main.tsx">` reference):
+
+```sh
+cd site-b
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
