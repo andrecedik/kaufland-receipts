@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom"
+import { CommandMenu } from "@/components/CommandMenu"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +29,8 @@ export function Layout() {
             </NavLink>
           ))}
           <span className="flex-1" />
-          <div className="mb-3">
+          <div className="mb-3 flex items-center gap-2">
+            <CommandMenu />
             <ThemeToggle />
           </div>
         </nav>

@@ -1,4 +1,6 @@
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import { Card, CardContent } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney, monthlyTotals, trailingSpend } from "@/lib/receipts"
 
@@ -8,11 +10,16 @@ const WINDOWS = [
   { label: "Last 12 months", days: 365 },
 ]
 
+const CHART_CONFIG = {
+  total: { label: "Spent", color: "var(--primary)" },
+} satisfies ChartConfig
+
 export function StatsPage() {
   const months = monthlyTotals()
   const grandCount = months.reduce((sum, m) => sum + m.count, 0)
   const grandTotal = months.reduce((sum, m) => sum + m.total, 0)
   const now = new Date()
+  const chartData = [...months].sort((a, b) => a.month.localeCompare(b.month))
 
   return (
     <>
@@ -33,6 +40,26 @@ export function StatsPage() {
           )
         })}
       </div>
+
+      {chartData.length > 0 && (
+        <>
+          <h2 className="mb-3 text-lg font-semibold">Monthly spend</h2>
+          <Card className="mb-8">
+            <CardContent>
+              <ChartContainer config={CHART_CONFIG} className="aspect-auto h-[240px] w-full">
+                <BarChart data={chartData}>
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent formatter={(value) => fmtMoney(Number(value))} />}
+                  />
+                  <Bar dataKey="total" fill="var(--color-total)" radius={4} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <h2 className="mb-3 text-lg font-semibold">Monthly totals</h2>
       <div className="overflow-hidden rounded-[10px]">
