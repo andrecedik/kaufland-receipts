@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
+import { itemPriceHistory, monthlyTotals, receipts, trailingSpend } from "@/lib/receipts"
 import type { LineItem, Receipt, Store } from "@/lib/types"
 
 const STORE: Store = { name: "Kaufland Test", street: null, city: null, postal_code: null }
@@ -32,11 +33,10 @@ function receipt(overrides: Partial<Receipt>): Receipt {
   }
 }
 
-const fixtureReceipts = vi.hoisted(() => [] as Receipt[])
-
-vi.mock("@/data/receipts.json", () => ({ default: fixtureReceipts }))
-
-fixtureReceipts.push(
+// `receipts` is normally populated by loadReceipts() (a runtime fetch, see
+// main.tsx) before the app renders; here it's filled directly with fixture
+// data instead, since these tests exercise functions that read it.
+receipts.push(
   receipt({
     receipt_id: "a",
     purchased_at: "2026-06-01T09:00:00",
@@ -58,24 +58,21 @@ fixtureReceipts.push(
 )
 
 describe("derived stats over the receipt collection", () => {
-  it("itemPriceHistory sorts observations by purchase date and skips refunds/no-price lines", async () => {
-    const { itemPriceHistory } = await import("@/lib/receipts")
+  it("itemPriceHistory sorts observations by purchase date and skips refunds/no-price lines", () => {
     const history = itemPriceHistory()
     expect(Array.from(history.keys())).toEqual(["Milch"])
     const milch = history.get("Milch")!
     expect(milch.map((o) => o.receipt.receipt_id)).toEqual(["a", "c"])
   })
 
-  it("monthlyTotals groups by month, newest first", async () => {
-    const { monthlyTotals } = await import("@/lib/receipts")
+  it("monthlyTotals groups by month, newest first", () => {
     expect(monthlyTotals()).toEqual([
       { month: "2026-08", count: 1, total: 2.19 },
       { month: "2026-06", count: 2, total: 1.5 },
     ])
   })
 
-  it("trailingSpend sums receipts within the window relative to `now`", async () => {
-    const { trailingSpend } = await import("@/lib/receipts")
+  it("trailingSpend sums receipts within the window relative to `now`", () => {
     const now = new Date("2026-08-10T00:00:00")
     expect(trailingSpend(30, now)).toEqual({ total: 2.19, count: 1 })
     expect(trailingSpend(120, now)).toEqual({ total: 3.69, count: 3 })

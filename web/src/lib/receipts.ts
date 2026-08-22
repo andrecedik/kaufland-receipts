@@ -1,7 +1,17 @@
-import receiptsData from "@/data/receipts.json"
 import type { LineItem, Receipt } from "@/lib/types"
 
-export const receipts: Receipt[] = receiptsData as Receipt[]
+// Fetched at runtime from public/data/receipts.json rather than imported as
+// a JS module -- an import gets inlined straight into the main bundle, so
+// the shipped chunk size would grow with every receipt ever ingested. Kept
+// as a mutable array (not reassigned) so every function below that closes
+// over `receipts` sees the loaded data without needing its own fetch.
+export const receipts: Receipt[] = []
+
+export async function loadReceipts(): Promise<void> {
+  const res = await fetch("data/receipts.json")
+  const data = (await res.json()) as Receipt[]
+  receipts.push(...data)
+}
 
 export function num(value: string | null): number {
   return value === null ? 0 : Number(value)

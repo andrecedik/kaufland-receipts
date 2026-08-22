@@ -23,4 +23,4 @@ export.json
 # shadcn/React variant (web/) — build tooling and personal data
 web/node_modules/
 web/dist/
-web/src/data/receipts.json
+web/public/data/receipts.json

@@ -156,12 +156,16 @@ def web_b_data(
     web_dir: Path = typer.Option(Path("web"), help="Path to the web/ (shadcn variant) project."),
 ):
     """Prepare data for the shadcn/React variant: export receipts.json into
-    web/src/data/ and copy source PDFs into web/public/pdfs/, so `npm run
+    web/public/data/ and copy source PDFs into web/public/pdfs/, so `npm run
     build` (inside web/) has everything it needs. Run this before every
     site-b rebuild, the same way `kaufland web` reads the store directly.
+
+    receipts.json lives under public/, not src/, so the built app fetches it
+    at runtime instead of Vite inlining it into the JS bundle -- otherwise
+    the shipped chunk size grows with every receipt ever ingested.
     """
     receipts = _store().all()
-    data_dir = web_dir / "src" / "data"
+    data_dir = web_dir / "public" / "data"
     pdfs_dir = web_dir / "public" / "pdfs"
     data_dir.mkdir(parents=True, exist_ok=True)
     pdfs_dir.mkdir(parents=True, exist_ok=True)
