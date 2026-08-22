@@ -251,10 +251,17 @@ def _build_receipt_pages(receipts: list[Receipt], out_dir: Path) -> None:
         address = ", ".join(
             part for part in [r.store.street, f"{r.store.postal_code or ''} {r.store.city or ''}".strip()] if part
         )
+        pdf_link = ""
+        if r.source_file:
+            src_pdf = Path(r.source_file)
+            if src_pdf.exists():
+                dest_name = f"{r.receipt_id}.pdf"
+                shutil.copy2(src_pdf, receipts_dir / dest_name)
+                pdf_link = f' <a href="{_esc(dest_name)}">View original PDF</a>'
         body = f"""<a class="back" href="../index.html">&larr; All receipts</a>
 <h1>{_esc(r.store.name)}</h1>
 <p class="subtitle">{r.purchased_at:%Y-%m-%d %H:%M}{' &middot; ' + _esc(address) if address else ''}</p>
-<p><span class="badge">{_esc(r.receipt_id)}</span> <span class="badge">source: {_esc(r.source)}</span></p>
+<p><span class="badge">{_esc(r.receipt_id)}</span> <span class="badge">source: {_esc(r.source)}</span>{pdf_link}</p>
 <table>
 <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th><th>Tax</th></tr></thead>
 <tbody>
