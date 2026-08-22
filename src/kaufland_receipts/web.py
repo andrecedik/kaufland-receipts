@@ -31,43 +31,43 @@ from .models import LineItem, Receipt
 STYLE_CSS = """\
 :root {
   color-scheme: light dark;
-  --bg: #fbf7f2;
-  --fg: #2b211b;
-  --muted: #7a6656;
-  --border: #e7ddd1;
-  --accent: #a6491e;
-  --row-alt: #f4ebe1;
-  --row-hover: #eedfcf;
-  --thead-bg: #3b2a20;
-  --thead-fg: #f6ecdf;
-  --match: #5b7a3f;
-  --mismatch: #a8452f;
+  --bg: #fff8f2;
+  --fg: #2e2126;
+  --muted: #81666d;
+  --border: #f4ded2;
+  --accent: #c34017;
+  --row-alt: #fdeee3;
+  --row-hover: #fbe1ce;
+  --thead-bg: #7a2e3d;
+  --thead-fg: #fff3e8;
+  --match: #3c7b3b;
+  --mismatch: #c23350;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #201812;
-    --fg: #f2e9dd;
-    --muted: #b7a28c;
-    --border: #3e322a;
-    --accent: #e28743;
-    --row-alt: #2a2019;
-    --row-hover: #34281f;
-    --thead-bg: #4a362a;
-    --match: #8fb86b;
-    --mismatch: #e0785d;
+    --bg: #241a22;
+    --fg: #fbede6;
+    --muted: #c7a0a8;
+    --border: #4a2e3a;
+    --accent: #ff7a50;
+    --row-alt: #2e2029;
+    --row-hover: #3a2733;
+    --thead-bg: #8c3a4a;
+    --match: #7ed17a;
+    --mismatch: #ff6e8a;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #201812;
-  --fg: #f2e9dd;
-  --muted: #b7a28c;
-  --border: #3e322a;
-  --accent: #e28743;
-  --row-alt: #2a2019;
-  --row-hover: #34281f;
-  --thead-bg: #4a362a;
-  --match: #8fb86b;
-  --mismatch: #e0785d;
+  --bg: #241a22;
+  --fg: #fbede6;
+  --muted: #c7a0a8;
+  --border: #4a2e3a;
+  --accent: #ff7a50;
+  --row-alt: #2e2029;
+  --row-hover: #3a2733;
+  --thead-bg: #8c3a4a;
+  --match: #7ed17a;
+  --mismatch: #ff6e8a;
 }
 * { box-sizing: border-box; }
 body {
