@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import shutil
 from collections import defaultdict
 from decimal import Decimal
 from pathlib import Path
@@ -80,6 +81,40 @@ def append_price_history(receipts: list[Receipt], path: Path) -> int:
                 seen.add(key)
                 rows += 1
     return rows
+
+
+def export_web_b_data(receipts: list[Receipt], web_dir: Path) -> tuple[int, int]:
+    """Write receipts.json + copy source PDFs for the shadcn/React site (web/).
+
+    receipts.json lives under public/, not src/, so the built app fetches it
+    at runtime instead of Vite inlining it into the JS bundle -- otherwise
+    the shipped chunk size grows with every receipt ever ingested. Shared by
+    the one-shot and ``--watch`` paths of ``kaufland web-b-data``.
+
+    Returns ``(receipts written, PDFs copied)``.
+    """
+    data_dir = web_dir / "public" / "data"
+    pdfs_dir = web_dir / "public" / "pdfs"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    pdfs_dir.mkdir(parents=True, exist_ok=True)
+
+    # `source_file` is the ingest-time path, which can move or be deleted
+    # afterwards -- record whether the PDF was actually copied so the UI can
+    # tell "no PDF" apart from "PDF used to exist" instead of trusting the
+    # stale path string (see kaufland-receipts code review finding #6).
+    copied = 0
+    records = []
+    for r in receipts:
+        record = r.model_dump(mode="json")
+        pdf_available = bool(r.source_file and Path(r.source_file).exists())
+        record["pdf_available"] = pdf_available
+        if pdf_available:
+            shutil.copy2(r.source_file, pdfs_dir / f"{r.receipt_id}.pdf")
+            copied += 1
+        records.append(record)
+
+    (data_dir / "receipts.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+    return len(receipts), copied
 
 
 def monthly_summary_markdown(receipts: list[Receipt]) -> str:

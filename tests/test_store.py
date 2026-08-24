@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from kaufland_receipts.export import (
     append_price_history,
+    export_web_b_data,
     monthly_summary_markdown,
     to_csv,
 )
@@ -63,6 +64,29 @@ def test_price_history_dedupes(tmp_path):
     assert append_price_history([_receipt()], log) == 2
     # re-running adds nothing
     assert append_price_history([_receipt()], log) == 0
+
+
+def test_export_web_b_data_writes_receipts_and_copies_available_pdfs(tmp_path):
+    pdf = tmp_path / "source.pdf"
+    pdf.write_bytes(b"%PDF-fake")
+    with_pdf = _receipt(rid="has-pdf")
+    with_pdf.source_file = str(pdf)
+    without_pdf = _receipt(rid="no-pdf")
+    without_pdf.source_file = str(tmp_path / "deleted.pdf")  # never written -- gone
+
+    web_dir = tmp_path / "web"
+    count, copied = export_web_b_data([with_pdf, without_pdf], web_dir)
+
+    assert count == 2
+    assert copied == 1
+    assert (web_dir / "public" / "pdfs" / "has-pdf.pdf").exists()
+    assert not (web_dir / "public" / "pdfs" / "no-pdf.pdf").exists()
+
+    import json
+    records = json.loads((web_dir / "public" / "data" / "receipts.json").read_text())
+    by_id = {r["receipt_id"]: r for r in records}
+    assert by_id["has-pdf"]["pdf_available"] is True
+    assert by_id["no-pdf"]["pdf_available"] is False
 
 
 def test_monthly_summary_groups_by_month():

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import shutil
 import time
 from pathlib import Path
 from typing import Optional
@@ -151,46 +149,53 @@ def web(
     )
 
 
+def _store_fingerprint(store: ReceiptStore) -> frozenset[tuple[str, float]]:
+    """Cheap change signal for --watch: (filename, mtime) of every stored receipt."""
+    return frozenset((p.name, p.stat().st_mtime) for p in store.receipts_dir.glob("*.json"))
+
+
 @app.command(name="web-b-data")
 def web_b_data(
     web_dir: Path = typer.Option(Path("web"), help="Path to the web/ (shadcn variant) project."),
+    watch: bool = typer.Option(
+        False, "--watch",
+        help="Keep running and re-export whenever a receipt is added, instead of exiting after one export.",
+    ),
+    interval: float = typer.Option(3.0, help="Seconds between store checks (only with --watch)."),
 ):
     """Prepare data for the shadcn/React variant: export receipts.json into
-    web/public/data/ and copy source PDFs into web/public/pdfs/, so `npm run
-    build` (inside web/) has everything it needs. Run this before every
-    site-b rebuild, the same way `kaufland web` reads the store directly.
+    web/public/data/ and copy source PDFs into web/public/pdfs/.
 
-    receipts.json lives under public/, not src/, so the built app fetches it
-    at runtime instead of Vite inlining it into the JS bundle -- otherwise
-    the shipped chunk size grows with every receipt ever ingested.
+    Pair this with `npm run dev` (not `build`) inside web/ for local
+    development: Vite serves public/ live, so a re-export already shows up
+    on the next browser refresh with no rebuild step. Add --watch and even
+    the re-export happens on its own as you ingest receipts -- run
+    `kaufland web-b-data --watch` and `npm run dev` side by side and a
+    refresh always shows the latest data.
     """
-    receipts = _store().all()
+    store = _store()
     data_dir = web_dir / "public" / "data"
     pdfs_dir = web_dir / "public" / "pdfs"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    pdfs_dir.mkdir(parents=True, exist_ok=True)
 
-    # `source_file` is the ingest-time path, which can move or be deleted
-    # afterwards -- record whether the PDF was actually copied so the UI can
-    # tell "no PDF" apart from "PDF used to exist" instead of trusting the
-    # stale path string (see kaufland-receipts code review finding #6).
-    copied = 0
-    records = []
-    for r in receipts:
-        record = r.model_dump(mode="json")
-        pdf_available = bool(r.source_file and Path(r.source_file).exists())
-        record["pdf_available"] = pdf_available
-        if pdf_available:
-            shutil.copy2(r.source_file, pdfs_dir / f"{r.receipt_id}.pdf")
-            copied += 1
-        records.append(record)
+    def do_export() -> None:
+        count, copied = export_mod.export_web_b_data(store.all(), web_dir)
+        typer.secho(
+            f"Wrote {count} receipt(s) to {data_dir / 'receipts.json'}, copied {copied} PDF(s) to {pdfs_dir}",
+            fg=typer.colors.GREEN,
+        )
 
-    (data_dir / "receipts.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+    do_export()
+    if not watch:
+        return
 
-    typer.secho(
-        f"Wrote {len(receipts)} receipt(s) to {data_dir / 'receipts.json'}, copied {copied} PDF(s) to {pdfs_dir}",
-        fg=typer.colors.GREEN,
-    )
+    typer.echo(f"Watching the receipt store for changes (every {interval:.0f}s, Ctrl+C to stop)")
+    fingerprint = _store_fingerprint(store)
+    while True:
+        time.sleep(interval)
+        current = _store_fingerprint(store)
+        if current != fingerprint:
+            fingerprint = current
+            do_export()
 
 
 if __name__ == "__main__":

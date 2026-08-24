@@ -55,17 +55,19 @@ TypeScript app built with [shadcn/ui](https://ui.shadcn.com/), output to
 `site-b/`. It won an A/B comparison against a plain-HTML static site (below)
 on 2026-08-22 for its richer UI (search/sort, Cmd+K command palette, charts).
 
+For day-to-day use, run it as a dev server instead of building — no build
+step, and receipts.json is fetched at runtime (not baked in), so a browser
+refresh always shows the latest data:
+
 ```sh
-uv run kaufland web-b-data   # export receipts.json + copy PDFs for web/
-cd web && npm install && npm run build
-npm run preview               # view it — prints a local URL to open
+uv run kaufland web-b-data --watch   # keeps re-exporting as you ingest receipts
+cd web && npm install && npm run dev # separate terminal — prints a local URL to open
 ```
 
-It needs a local server — it can't be opened via `file://`, since Chrome
-blocks ES module scripts under that origin. `npm run preview` (from `web/`)
-is the easiest way to view it; see [`web/README.md`](web/README.md) for the
-alternative of serving `site-b/` directly, and the directory mix-up to avoid
-there.
+`npm run dev` gives instant hot-reload on code changes; refresh the browser
+to pick up new receipt data (no rebuild either way). Only build (below) when
+producing a static copy to deploy or hand off — see [`web/README.md`](web/README.md)
+for the build/preview flow and the directory mix-up to avoid there.
 
 ## Static HTML site — fallback, not actively developed
 

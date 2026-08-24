@@ -7,8 +7,6 @@ same four pages (receipt list, receipt detail, item price history,
 statistics), but built with [shadcn/ui](https://ui.shadcn.com/) (Radix +
 Tailwind CSS v4) on Vite + React + TypeScript, output to `../site-b/`.
 
-## Building
-
 Needs Node `^20.19.0 || >=22.12.0` (Vite 8's bundler, Rolldown, needs
 `node:util`'s `styleText` export, missing before Node 20.12). If you use
 nvm, `cd web && nvm use` picks up the pinned version in `.nvmrc`
@@ -18,8 +16,39 @@ cryptic crash deep in `node_modules/rolldown` ("does not provide an export
 named 'styleText'"), which is what an old Node version left active in a
 shell (e.g. via nvm) looks like.
 
+## Local development (recommended)
+
+`npm run dev` starts Vite's own dev server with hot-reload on every code
+change — no build step at all. Data isn't bundled either (see "Notable
+differences" below), so it's read straight from `public/data/receipts.json`
+on every page load; a browser refresh always shows whatever was last
+exported there, still with zero rebuild.
+
 ```sh
-# from the repo root — exports web/src/data/receipts.json and copies
+# from the repo root, in one terminal — exports receipts.json + PDFs once,
+# then keeps re-exporting as you ingest new receipts (Ctrl+C to stop)
+uv run kaufland web-b-data --watch
+
+cd web            # in another terminal
+nvm use           # if you use nvm — matches .nvmrc
+npm install       # first time only
+npm run dev
+# open the URL it prints (usually http://localhost:5173)
+```
+
+Refreshing the browser is still required to see newly-ingested receipts —
+Vite's dev server doesn't auto-reload the page just because a file under
+`public/` changed (confirmed against Vite 8; it may in other setups, but
+don't rely on it). Code edits, on the other hand, hot-reload automatically
+with no refresh needed.
+
+## Building
+
+Only needed to produce a static, deployable copy of the site (`../site-b/`)
+— not for local development, see above.
+
+```sh
+# from the repo root — exports web/public/data/receipts.json and copies
 # source PDFs into web/public/pdfs/ from the local receipt store
 uv run kaufland web-b-data
 
@@ -64,8 +93,11 @@ route configuration needed; any static file server works.
 
 ## Notable differences from `site/`
 
-- **Data**: baked in at build time from `web/src/data/receipts.json`
-  (gitignored — regenerate with `kaufland web-b-data`), not read live.
+- **Data**: fetched at runtime from `public/data/receipts.json` (gitignored
+  — regenerate with `kaufland web-b-data`), not bundled at build time — kept
+  out of the JS bundle so the shipped chunk size doesn't grow with every
+  receipt ever ingested, and so new data shows up on refresh without a
+  rebuild (see "Local development" above).
 - **Theme toggle**: same idea (manual light/dark pin, persisted in
   `localStorage`, applied before first paint to avoid a flash), implemented
   with Tailwind's `class` dark-mode strategy (`.dark` on `<html>`) instead
