@@ -1,6 +1,17 @@
+import { Info, TriangleAlert } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
 import { fmtMoney, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
@@ -38,8 +49,51 @@ export function ReceiptDetailPage() {
         {address ? ` · ${address}` : ""}
       </p>
       <div className="mb-4 flex items-center gap-2">
-        <Badge variant="secondary">{receipt.receipt_id}</Badge>
-        <Badge variant="secondary">source: {receipt.source}</Badge>
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button
+              type="button"
+              variant={matches ? "outline" : "destructive"}
+              size="icon-sm"
+              aria-label={matches ? "View ingestion info" : "View ingestion info (totals mismatch)"}
+            >
+              {matches ? <Info /> : <TriangleAlert />}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Receipt info</DrawerTitle>
+              <DrawerDescription>Ingestion metadata — not part of the printed receipt.</DrawerDescription>
+            </DrawerHeader>
+            <div className="flex flex-col gap-3 px-4 pb-4 text-sm">
+              <div>
+                <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Receipt ID</div>
+                <div className="font-mono">{receipt.receipt_id}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Source</div>
+                <div>{receipt.source}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Parsing</div>
+                {matches ? (
+                  <p className="text-match">&#10003; matches printed total</p>
+                ) : (
+                  <p className="font-semibold text-destructive">
+                    &#9888; line items sum to {lineItemSum(receipt).toFixed(2)}, printed total is {num(receipt.total).toFixed(2)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button type="button" variant="outline">
+                  Close
+                </Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
         {receipt.pdf_available && (
           <Button asChild variant="outline" size="sm">
             <a href={`pdfs/${receipt.receipt_id}.pdf`}>View original PDF</a>
@@ -100,16 +154,6 @@ export function ReceiptDetailPage() {
           </TableFooter>
         </Table>
       </div>
-
-      <p className="mt-3">
-        {matches ? (
-          <span className="text-match">&#10003; matches printed total</span>
-        ) : (
-          <span className="font-semibold text-destructive">
-            &#9888; line items sum to {lineItemSum(receipt).toFixed(2)}, printed total is {num(receipt.total).toFixed(2)}
-          </span>
-        )}
-      </p>
     </>
   )
 }
