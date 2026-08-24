@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
 import { fmtMoney, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
@@ -11,9 +12,9 @@ export function ReceiptDetailPage() {
   if (!receipt) {
     return (
       <>
-        <Link to="/" className="mb-4 inline-block text-primary hover:underline">
-          &larr; All receipts
-        </Link>
+        <Button asChild variant="outline" size="sm" className="mb-4">
+          <Link to="/">&larr; All receipts</Link>
+        </Button>
         <p>Receipt not found.</p>
       </>
     )
@@ -28,9 +29,9 @@ export function ReceiptDetailPage() {
 
   return (
     <>
-      <Link to="/" className="mb-4 inline-block text-primary hover:underline">
-        &larr; All receipts
-      </Link>
+      <Button asChild variant="outline" size="sm" className="mb-4">
+        <Link to="/">&larr; All receipts</Link>
+      </Button>
       <h1 className="text-2xl font-bold">{receipt.store.name}</h1>
       <p className="mb-2 text-muted-foreground">
         {fmtDateTime(receipt.purchased_at)}
@@ -40,9 +41,9 @@ export function ReceiptDetailPage() {
         <Badge variant="secondary">{receipt.receipt_id}</Badge>
         <Badge variant="secondary">source: {receipt.source}</Badge>
         {receipt.pdf_available && (
-          <a href={`pdfs/${receipt.receipt_id}.pdf`} className="font-medium text-primary hover:underline">
-            View original PDF
-          </a>
+          <Button asChild variant="outline" size="sm">
+            <a href={`pdfs/${receipt.receipt_id}.pdf`}>View original PDF</a>
+          </Button>
         )}
       </div>
 

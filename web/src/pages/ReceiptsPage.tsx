@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -102,9 +103,9 @@ export function ReceiptsPage() {
                 <TableCell className="text-right tabular-nums">{r.line_items.length}</TableCell>
                 <TableCell className="text-right tabular-nums">{fmtMoney(num(r.total), r.currency)}</TableCell>
                 <TableCell>
-                  <Link to={`/receipts/${r.receipt_id}`} className="font-medium text-primary hover:underline">
-                    Details
-                  </Link>
+                  <Button asChild variant="outline" size="xs">
+                    <Link to={`/receipts/${r.receipt_id}`}>Details</Link>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

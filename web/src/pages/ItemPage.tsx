@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import { Sparkline } from "@/components/Sparkline"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDate, isoDate } from "@/lib/format"
 import { itemNameForSlug, itemPriceHistory, num } from "@/lib/receipts"
@@ -13,9 +14,9 @@ export function ItemPage() {
   if (!name || !observations) {
     return (
       <>
-        <Link to="/" className="mb-4 inline-block text-primary hover:underline">
-          &larr; All receipts
-        </Link>
+        <Button asChild variant="outline" size="sm" className="mb-4">
+          <Link to="/">&larr; All receipts</Link>
+        </Button>
         <p>No price history for this item.</p>
       </>
     )
@@ -35,9 +36,9 @@ export function ItemPage() {
 
   return (
     <>
-      <Link to="/" className="mb-4 inline-block text-primary hover:underline">
-        &larr; All receipts
-      </Link>
+      <Button asChild variant="outline" size="sm" className="mb-4">
+        <Link to="/">&larr; All receipts</Link>
+      </Button>
       <h1 className="text-2xl font-bold">{name}</h1>
       <p className="mb-1 text-muted-foreground">{points.length} observation(s)</p>
       {changed && (
