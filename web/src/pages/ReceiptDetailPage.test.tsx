@@ -65,11 +65,12 @@ function renderDetail(id: string) {
 }
 
 describe("ReceiptDetailPage ingestion-info drawer", () => {
-  it("shows a neutral info button when totals reconcile, closed by default", () => {
+  it("shows a neutral 'View Info' button when totals reconcile, closed by default", () => {
     receipts.push(receipt({}))
     renderDetail("kaufland-test-1")
 
-    expect(screen.getByRole("button", { name: "View ingestion info" })).toBeTruthy()
+    const button = screen.getByRole("button", { name: "View Info" })
+    expect(button.getAttribute("data-variant")).toBe("outline")
     expect(screen.queryByText("Receipt info")).toBeNull() // drawer content not mounted until opened
   })
 
@@ -77,7 +78,7 @@ describe("ReceiptDetailPage ingestion-info drawer", () => {
     receipts.push(receipt({}))
     renderDetail("kaufland-test-1")
 
-    fireEvent.click(screen.getByRole("button", { name: "View ingestion info" }))
+    fireEvent.click(screen.getByRole("button", { name: "View Info" }))
 
     expect(screen.getByText("Receipt info")).toBeTruthy()
     expect(screen.getByText("kaufland-test-1")).toBeTruthy()
@@ -85,11 +86,12 @@ describe("ReceiptDetailPage ingestion-info drawer", () => {
     expect(screen.getByText("✓ matches printed total")).toBeTruthy()
   })
 
-  it("switches to a warning button and message when totals don't reconcile", () => {
+  it("switches to a warning-styled button and message when totals don't reconcile", () => {
     receipts.push(receipt({ total: "999.99" })) // line items still sum to 3.50
     renderDetail("kaufland-test-1")
 
-    const button = screen.getByRole("button", { name: "View ingestion info (totals mismatch)" })
+    const button = screen.getByRole("button", { name: "View Info" })
+    expect(button.getAttribute("data-variant")).toBe("destructive")
     fireEvent.click(button)
 
     expect(screen.getByText("⚠ line items sum to 3.50, printed total is 999.99")).toBeTruthy()

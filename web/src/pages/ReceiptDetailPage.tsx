@@ -49,15 +49,11 @@ export function ReceiptDetailPage() {
         {address ? ` · ${address}` : ""}
       </p>
       <div className="mb-4 flex items-center gap-2">
-        <Drawer>
+        <Drawer direction="right">
           <DrawerTrigger asChild>
-            <Button
-              type="button"
-              variant={matches ? "outline" : "destructive"}
-              size="icon-sm"
-              aria-label={matches ? "View ingestion info" : "View ingestion info (totals mismatch)"}
-            >
+            <Button type="button" variant={matches ? "outline" : "destructive"} size="sm">
               {matches ? <Info /> : <TriangleAlert />}
+              View Info
             </Button>
           </DrawerTrigger>
           <DrawerContent>
