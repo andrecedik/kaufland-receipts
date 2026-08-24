@@ -102,7 +102,7 @@ export function ReceiptsPage() {
                 <TableCell>{r.store.name}</TableCell>
                 <TableCell className="text-right tabular-nums">{r.line_items.length}</TableCell>
                 <TableCell className="text-right tabular-nums">{fmtMoney(num(r.total), r.currency)}</TableCell>
-                <TableCell>
+                <TableCell className="text-right">
                   <Button asChild variant="outline" size="xs">
                     <Link to={`/receipts/${r.receipt_id}`}>Details</Link>
                   </Button>
