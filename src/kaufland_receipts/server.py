@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.staticfiles import StaticFiles
 
 from . import export as export_mod
 from .parse_pdf import parse_pdf
@@ -55,5 +56,9 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
             "total": str(receipt.total),
             "currency": receipt.currency,
         }
+
+    public_dir = web_dir / "public"
+    public_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/", StaticFiles(directory=public_dir, html=True), name="static")
 
     return app

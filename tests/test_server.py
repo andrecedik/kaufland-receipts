@@ -113,3 +113,39 @@ def test_upload_refreshes_the_web_data(tmp_path, monkeypatch):
     # endpoint persisted under store.data_dir/uploads/ before parsing, so
     # export_web_b_data finds a real file to copy here -- not a fake.
     assert (web_dir / "public" / "pdfs" / "r1.pdf").exists()
+
+
+def test_static_mount_serves_index_html(tmp_path):
+    web_dir = tmp_path / "web"
+    (web_dir / "public").mkdir(parents=True)
+    (web_dir / "public" / "index.html").write_text("<h1>kaufland-receipts</h1>", encoding="utf-8")
+    store = ReceiptStore(data_dir=tmp_path / "data")
+    client = TestClient(create_app(store, web_dir))
+
+    res = client.get("/")
+
+    assert res.status_code == 200
+    assert "<h1>kaufland-receipts</h1>" in res.text
+
+
+def test_static_mount_serves_nested_assets(tmp_path):
+    web_dir = tmp_path / "web"
+    (web_dir / "public" / "assets").mkdir(parents=True)
+    (web_dir / "public" / "assets" / "app.js").write_text("console.log('hi')", encoding="utf-8")
+    store = ReceiptStore(data_dir=tmp_path / "data")
+    client = TestClient(create_app(store, web_dir))
+
+    res = client.get("/assets/app.js")
+
+    assert res.status_code == 200
+    assert res.text == "console.log('hi')"
+
+
+def test_static_mount_handles_missing_public_dir(tmp_path):
+    web_dir = tmp_path / "web"  # web_dir/public/ deliberately never created
+
+    client, _store = _client(tmp_path)
+
+    res = client.get("/")
+
+    assert res.status_code == 404
