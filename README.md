@@ -48,6 +48,29 @@ Receipts are cached as one JSON file each under
 `~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — re-run
 `watch`/`ingest` freely.
 
+## Web Upload — alternative to the iCloud watcher
+
+Folder Watch (above) only works on a Mac with iCloud Drive. `kaufland serve`
+runs a small local HTTP server instead, so a receipt can be uploaded straight
+from the browser's Upload page — the ingestion path for a NAS/Docker
+deployment, or just an alternative to the iCloud folder on a Mac. Run it from
+the **repository root** (its `--web-dir` default is the relative path `web`,
+same convention as `kaufland web-b-data` below):
+
+```sh
+uv run kaufland serve --web-dir web   # binds 127.0.0.1:8000 by default
+cd web && npm install && npm run dev  # separate terminal — proxies /api to the server above
+```
+
+Open the printed `npm run dev` URL and go to **Upload**. A successful upload
+re-exports `web/public/data/receipts.json` immediately — no separate
+`web-b-data --watch` needed alongside it.
+
+`--host`/`--port` are configurable, but there is **no authentication** on the
+upload endpoint — only bind `--host 0.0.0.0` (to reach it from other devices)
+behind a trusted network or a reverse proxy that adds auth; the default
+`127.0.0.1` keeps it loopback-only.
+
 ## Site (shadcn/React) — primary
 
 [`web/`](web/) is the primary way to browse receipts: a Vite + React +
@@ -90,6 +113,9 @@ Open `site/index.html` directly in a browser, or serve it locally with
 - [x] PDF ingestion + iCloud watcher — **parser validated against real
       digital-receipt PDFs**; parsed line items reconcile exactly to the printed
       `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
+- [x] Web Upload (`kaufland serve` + browser Upload page) — alternative
+      ingestion path for non-Mac/NAS use; no auth on the endpoint yet, so it's
+      loopback-only by default (see above)
 - [x] Static HTML site — kept as fallback, not actively developed (see above)
 - [x] Primary site: shadcn/React (`web/` → `site-b/`) — won the A/B comparison
       2026-08-22
