@@ -71,6 +71,36 @@ upload endpoint — only bind `--host 0.0.0.0` (to reach it from other devices)
 behind a trusted network or a reverse proxy that adds auth; the default
 `127.0.0.1` keeps it loopback-only.
 
+## Docker
+
+For a NAS/self-hosted deployment: one container runs both the API and the
+built frontend (no separate `npm run dev` needed, unlike the two-process
+dev flow above).
+
+```sh
+docker compose up -d --build
+```
+
+Receipts and uploaded PDFs persist in `./data` on the host (edit
+`docker-compose.yml`'s volume line to store them elsewhere) — this is the
+same `XDG_DATA_HOME`-backed store the CLI and dev workflow use, just
+mounted at `/data` inside the container. **This volume mount is required**
+— running the container without it (e.g. a plain `docker run` with no
+`-v`) still works, but everything is written to the container's own
+writable layer instead, and is permanently lost the moment the container
+is removed.
+
+Building for a specific platform (the image supports both `linux/amd64`
+and `linux/arm64`):
+
+```sh
+docker build --platform linux/amd64 -t kaufland-receipts .    # or linux/arm64
+```
+
+Same no-auth caveat as `kaufland serve` above: don't expose port 8000
+beyond a trusted network without adding auth in front of it (e.g. a
+reverse proxy).
+
 ## Site (shadcn/React)
 
 [`web/`](web/) is the site for browsing receipts: a Vite + React +
@@ -100,6 +130,9 @@ for the build/preview flow and the directory mix-up to avoid there.
 - [x] Web Upload (`kaufland serve` + browser Upload page) — alternative
       ingestion path for non-Mac/NAS use; no auth on the endpoint yet, so it's
       loopback-only by default (see above)
+- [x] Docker packaging (`docker compose up -d`) — single container, serves
+      both the API and the built frontend; multi-arch (amd64/arm64) build
+      supported, not yet published to a registry
 - [x] Site: shadcn/React (`web/` → `site/`)
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client

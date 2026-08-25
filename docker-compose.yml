@@ -1,0 +1,8 @@
+services:
+  kaufland-receipts:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data   # receipts + uploaded PDFs live here on the host -- change the left side to store them elsewhere
+    restart: unless-stopped
