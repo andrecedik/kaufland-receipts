@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 
 const TABS = [
   { to: "/", label: "Receipts", end: true },
+  { to: "/upload", label: "Upload", end: false },
   { to: "/stats", label: "Statistics", end: false },
 ]
 

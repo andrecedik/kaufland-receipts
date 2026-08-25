@@ -9,6 +9,7 @@ const ReceiptsPage = lazy(() => import("@/pages/ReceiptsPage").then((m) => ({ de
 const ReceiptDetailPage = lazy(() => import("@/pages/ReceiptDetailPage").then((m) => ({ default: m.ReceiptDetailPage })))
 const ItemPage = lazy(() => import("@/pages/ItemPage").then((m) => ({ default: m.ItemPage })))
 const StatsPage = lazy(() => import("@/pages/StatsPage").then((m) => ({ default: m.StatsPage })))
+const UploadPage = lazy(() => import("@/pages/UploadPage").then((m) => ({ default: m.UploadPage })))
 
 // HashRouter (not BrowserRouter) so routes work without server-side rewrite
 // rules -- but this alone does NOT make the build openable via file://; see
@@ -23,6 +24,7 @@ function App() {
             <Route index element={<ReceiptsPage />} />
             <Route path="receipts/:id" element={<ReceiptDetailPage />} />
             <Route path="items/:slug" element={<ItemPage />} />
+            <Route path="upload" element={<UploadPage />} />
             <Route path="stats" element={<StatsPage />} />
           </Route>
         </Routes>
