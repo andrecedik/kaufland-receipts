@@ -20,6 +20,14 @@ export default defineConfig({
       '@': path.resolve(dirname, './src'),
     },
   },
+  server: {
+    // Forwards Web Upload's /api/* calls to `kaufland serve` (default
+    // 127.0.0.1:8000) during local dev, so the browser can call fetch("/api/...")
+    // without a CORS/absolute-URL dance.
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+    },
+  },
   build: {
     outDir: '../site-b',
     emptyOutDir: true,
