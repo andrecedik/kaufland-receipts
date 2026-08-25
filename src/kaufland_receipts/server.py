@@ -35,7 +35,7 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
         # from this final path, so `Receipt.source_file` points here for
         # good, matching what export_web_b_data expects downstream.
         uploads_dir.mkdir(parents=True, exist_ok=True)
-        dest = uploads_dir / f"{uuid.uuid4().hex[:8]}-{file.filename}"
+        dest = uploads_dir / f"{uuid.uuid4().hex[:8]}-{Path(file.filename).name}"
         dest.write_bytes(await file.read())
 
         try:
