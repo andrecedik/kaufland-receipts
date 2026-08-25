@@ -544,26 +544,29 @@ git commit -m "feat: compute Price Integrity Check verdicts"
 Append to `tests/test_store.py` (add `import json` to the top-of-file imports if not already present — check first, this file may already import it):
 
 ```python
-def test_export_web_data_attaches_price_verdicts(tmp_path):
-    store_kwargs = dict(store=Store(name="Kaufland", street="Teststraße 1"))
-    r1 = _receipt(rid="r1", total="2.00", when="2026-01-01T10:00:00")
-    r1.line_items = [LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal("2.00"),
-                               total_price=Decimal("2.00"), tax_class="B")]
-    for k, v in store_kwargs.items():
-        setattr(r1, k, v)
-    r2 = _receipt(rid="r2", total="2.00", when="2026-01-08T10:00:00")
-    r2.line_items = [LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal("2.00"),
-                               total_price=Decimal("2.00"), tax_class="B")]
-    for k, v in store_kwargs.items():
-        setattr(r2, k, v)
-    r3 = _receipt(rid="r3", total="1.70", when="2026-01-15T10:00:00")
-    r3.line_items = [
-        LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal("2.00"),
-                  total_price=Decimal("2.00"), tax_class="B"),
-        LineItem(name="K Card XTRA Rabatt", total_price=Decimal("-0.30")),
+def _milch_receipt(rid: str, when: str, total_price: str, discount: str | None = None) -> Receipt:
+    """A receipt with one Milch line item (and, optionally, an attached
+    per-item discount) at a fixed store location -- built directly rather
+    than via the module's existing `_receipt()` helper, since that helper
+    hardcodes its own MILCH/BROT line items and doesn't accept overrides."""
+    line_items = [
+        LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal(total_price),
+                  total_price=Decimal(total_price), tax_class="B"),
     ]
-    for k, v in store_kwargs.items():
-        setattr(r3, k, v)
+    if discount is not None:
+        line_items.append(LineItem(name="K Card XTRA Rabatt", total_price=Decimal(discount)))
+    total = sum((li.total_price for li in line_items), Decimal(0))
+    return Receipt(
+        receipt_id=rid, purchased_at=datetime.fromisoformat(when),
+        store=Store(name="Kaufland", street="Teststraße 1"),
+        line_items=line_items, total=total,
+    )
+
+
+def test_export_web_data_attaches_price_verdicts(tmp_path):
+    r1 = _milch_receipt("r1", "2026-01-01T10:00:00", total_price="2.00")
+    r2 = _milch_receipt("r2", "2026-01-08T10:00:00", total_price="2.00")
+    r3 = _milch_receipt("r3", "2026-01-15T10:00:00", total_price="2.00", discount="-0.30")
 
     web_dir = tmp_path / "web"
     export_web_data([r1, r2, r3], web_dir)
@@ -573,6 +576,7 @@ def test_export_web_data_attaches_price_verdicts(tmp_path):
     verdict = r3_record["line_items"][0]["price_verdict"]
     assert verdict["label"] == "genuine"
     assert verdict["median_price"] == "2.00"
+    assert verdict["current_price"] == "1.70"
     # the discount line itself never gets a verdict
     assert "price_verdict" not in r3_record["line_items"][1]
     # receipts with no qualifying discount have no price_verdict key at all
@@ -580,7 +584,7 @@ def test_export_web_data_attaches_price_verdicts(tmp_path):
     assert "price_verdict" not in r1_record["line_items"][0]
 ```
 
-Check the top of `tests/test_store.py` for its existing `_receipt(...)` helper signature and `Store`/`LineItem` imports before writing this — reuse what's already there (the helper's exact parameter names may differ slightly from what's sketched above; adapt to match, the behavior described is what matters).
+`tests/test_store.py` already imports `LineItem`, `Receipt`, `Store` from `kaufland_receipts.models` and `datetime`/`Decimal` — no new imports needed for those. Only `import json` may need adding (check first; this file may already import it for another test).
 
 - [ ] **Step 2: Run test to verify it fails**
 
