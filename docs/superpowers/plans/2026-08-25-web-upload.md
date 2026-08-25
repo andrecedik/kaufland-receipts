@@ -145,41 +145,56 @@ git commit -m "feat: add FastAPI app skeleton for Web Upload"
 - Consumes: `parse_pdf(path: Path) -> Receipt` (`parse_pdf.py`), `ReceiptStore.save(receipt, overwrite=False) -> bool`, `ReceiptStore.data_dir: Path`, `ReceiptStore.all() -> list[Receipt]` (`store.py`)
 - Produces: `POST /api/upload` — `200 {"status": "added", "receipt_id": str, "total": str, "currency": str}` | `200 {"status": "duplicate", "receipt_id": str}` | `422 {"detail": str}`
 
+Note: `.gitignore` excludes `/samples/` (real personal receipt data, never committed) and `parse_pdf`'s own correctness is already covered by `tests/test_parse.py` against the synthetic fixture there. So these tests monkeypatch `kaufland_receipts.server.parse_pdf` rather than depending on a real or synthetic PDF file — they exist to verify the HTTP endpoint's behavior (routing, storage, dedup, error mapping), not parsing correctness.
+
 - [ ] **Step 1: Write the failing tests**
 
-Append to `tests/test_server.py` (add `from pathlib import Path` to the top-of-file imports):
+Append to `tests/test_server.py` (add `from datetime import datetime`, `from decimal import Decimal`, and `from kaufland_receipts.models import Receipt, Store` to the top-of-file imports):
 
 ```python
-SAMPLE_PDF = Path(__file__).parent.parent / "samples" / "20260821_233939.pdf"
+def _install_fake_parse_pdf(monkeypatch, *, receipt_id="r1", total="12.34", raises=None):
+    """Stand in for the real parse_pdf: mirrors its contract of setting
+    source_file to the path it was given, without touching a real PDF."""
 
-
-def test_upload_adds_a_new_receipt(tmp_path):
-    client, store = _client(tmp_path)
-
-    with SAMPLE_PDF.open("rb") as f:
-        res = client.post(
-            "/api/upload", files={"file": (SAMPLE_PDF.name, f, "application/pdf")}
+    def fake_parse_pdf(path):
+        if raises is not None:
+            raise raises
+        return Receipt(
+            receipt_id=receipt_id,
+            purchased_at=datetime(2026, 8, 21, 23, 39, 39),
+            store=Store(name="Kaufland"),
+            line_items=[],
+            total=Decimal(total),
+            source_file=str(path),
         )
 
+    monkeypatch.setattr("kaufland_receipts.server.parse_pdf", fake_parse_pdf)
+
+
+def test_upload_adds_a_new_receipt(tmp_path, monkeypatch):
+    client, store = _client(tmp_path)
+    _install_fake_parse_pdf(monkeypatch, receipt_id="r1", total="12.34")
+
+    res = client.post(
+        "/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes", "application/pdf")}
+    )
+
     assert res.status_code == 200
-    body = res.json()
-    assert body["status"] == "added"
-    assert body["receipt_id"]
+    assert res.json() == {"status": "added", "receipt_id": "r1", "total": "12.34", "currency": "EUR"}
     assert len(store.all()) == 1
 
 
-def test_upload_is_idempotent(tmp_path):
+def test_upload_is_idempotent(tmp_path, monkeypatch):
     client, store = _client(tmp_path)
-    with SAMPLE_PDF.open("rb") as f:
-        client.post("/api/upload", files={"file": (SAMPLE_PDF.name, f, "application/pdf")})
+    _install_fake_parse_pdf(monkeypatch, receipt_id="r1", total="12.34")
+    client.post("/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes", "application/pdf")})
 
-    with SAMPLE_PDF.open("rb") as f:
-        res = client.post(
-            "/api/upload", files={"file": (SAMPLE_PDF.name, f, "application/pdf")}
-        )
+    res = client.post(
+        "/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes 2", "application/pdf")}
+    )
 
     assert res.status_code == 200
-    assert res.json()["status"] == "duplicate"
+    assert res.json() == {"status": "duplicate", "receipt_id": "r1"}
     assert len(store.all()) == 1
 
 
@@ -194,22 +209,23 @@ def test_upload_rejects_a_non_pdf(tmp_path):
     assert store.all() == []
 
 
-def test_upload_reports_a_parse_failure(tmp_path):
+def test_upload_reports_a_parse_failure(tmp_path, monkeypatch):
     client, store = _client(tmp_path)
+    _install_fake_parse_pdf(monkeypatch, raises=ValueError("not a Kaufland receipt"))
 
     res = client.post(
-        "/api/upload",
-        files={"file": ("receipt.pdf", b"%PDF-1.4 not really a receipt", "application/pdf")},
+        "/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes", "application/pdf")}
     )
 
     assert res.status_code == 422
+    assert res.json() == {"detail": "not a Kaufland receipt"}
     assert store.all() == []
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/test_server.py -v`
-Expected: FAIL — `404` (no such route) on the first three, and the fourth fails differently or errors, since `/api/upload` doesn't exist yet.
+Expected: FAIL — `404` (no such route) on all four, since `/api/upload` doesn't exist yet.
 
 - [ ] **Step 3: Implement the endpoint**
 
@@ -277,7 +293,7 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run pytest tests/test_server.py -v`
-Expected: PASS (all 5 tests)
+Expected: PASS (all 4 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -303,20 +319,23 @@ git commit -m "feat: implement POST /api/upload — parse, store, dedupe, valida
 Append to `tests/test_server.py` (add `import json` to the top-of-file imports):
 
 ```python
-def test_upload_refreshes_the_web_data(tmp_path):
+def test_upload_refreshes_the_web_data(tmp_path, monkeypatch):
     client, _store = _client(tmp_path)
     web_dir = tmp_path / "web"
+    _install_fake_parse_pdf(monkeypatch, receipt_id="r1", total="12.34")
 
-    with SAMPLE_PDF.open("rb") as f:
-        client.post("/api/upload", files={"file": (SAMPLE_PDF.name, f, "application/pdf")})
+    client.post("/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes", "application/pdf")})
 
     receipts_json = web_dir / "public" / "data" / "receipts.json"
     assert receipts_json.exists()
     data = json.loads(receipts_json.read_text("utf-8"))
     assert len(data) == 1
+    assert data[0]["receipt_id"] == "r1"
 
-    receipt_id = data[0]["receipt_id"]
-    assert (web_dir / "public" / "pdfs" / f"{receipt_id}.pdf").exists()
+    # source_file (see _install_fake_parse_pdf) points at the real bytes the
+    # endpoint persisted under store.data_dir/uploads/ before parsing, so
+    # export_web_b_data finds a real file to copy here -- not a fake.
+    assert (web_dir / "public" / "pdfs" / "r1.pdf").exists()
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -353,7 +372,7 @@ Replace the `"added"` return in the `upload` handler:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `uv run pytest tests/test_server.py -v`
-Expected: PASS (all 6 tests)
+Expected: PASS (all 5 tests)
 
 - [ ] **Step 5: Commit**
 
