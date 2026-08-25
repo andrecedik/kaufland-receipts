@@ -30,7 +30,7 @@ export interface Receipt {
   currency: string
   source: string
   source_file: string | null
-  // Whether web-b-data actually copied the PDF into public/pdfs/ -- distinct
+  // Whether web-data actually copied the PDF into public/pdfs/ -- distinct
   // from source_file, which is the ingest-time path and can go stale.
   pdf_available: boolean
 }

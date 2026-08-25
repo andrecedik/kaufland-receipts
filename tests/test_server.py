@@ -111,7 +111,7 @@ def test_upload_refreshes_the_web_data(tmp_path, monkeypatch):
 
     # source_file (see _install_fake_parse_pdf) points at the real bytes the
     # endpoint persisted under store.data_dir/uploads/ before parsing, so
-    # export_web_b_data finds a real file to copy here -- not a fake.
+    # export_web_data finds a real file to copy here -- not a fake.
     assert (web_dir / "public" / "pdfs" / "r1.pdf").exists()
 
 

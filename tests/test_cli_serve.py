@@ -16,7 +16,7 @@ def test_serve_reexports_before_starting_the_server(tmp_path, monkeypatch):
     def fake_run(fastapi_app, host, port):
         calls.append(("run", host, port))
 
-    monkeypatch.setattr("kaufland_receipts.cli.export_mod.export_web_b_data", fake_export)
+    monkeypatch.setattr("kaufland_receipts.cli.export_mod.export_web_data", fake_export)
     monkeypatch.setattr("kaufland_receipts.cli.uvicorn.run", fake_run)
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
 

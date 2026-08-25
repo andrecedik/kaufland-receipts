@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from kaufland_receipts.export import (
     append_price_history,
-    export_web_b_data,
+    export_web_data,
     monthly_summary_markdown,
     to_csv,
 )
@@ -66,7 +66,7 @@ def test_price_history_dedupes(tmp_path):
     assert append_price_history([_receipt()], log) == 0
 
 
-def test_export_web_b_data_writes_receipts_and_copies_available_pdfs(tmp_path):
+def test_export_web_data_writes_receipts_and_copies_available_pdfs(tmp_path):
     pdf = tmp_path / "source.pdf"
     pdf.write_bytes(b"%PDF-fake")
     with_pdf = _receipt(rid="has-pdf")
@@ -75,7 +75,7 @@ def test_export_web_b_data_writes_receipts_and_copies_available_pdfs(tmp_path):
     without_pdf.source_file = str(tmp_path / "deleted.pdf")  # never written -- gone
 
     web_dir = tmp_path / "web"
-    count, copied = export_web_b_data([with_pdf, without_pdf], web_dir)
+    count, copied = export_web_data([with_pdf, without_pdf], web_dir)
 
     assert count == 2
     assert copied == 1

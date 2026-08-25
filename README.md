@@ -55,7 +55,7 @@ runs a small local HTTP server instead, so a receipt can be uploaded straight
 from the browser's Upload page — the ingestion path for a NAS/Docker
 deployment, or just an alternative to the iCloud folder on a Mac. Run it from
 the **repository root** (its `--web-dir` default is the relative path `web`,
-same convention as `kaufland web-b-data` below):
+same convention as `kaufland web-data` below):
 
 ```sh
 uv run kaufland serve --web-dir web   # binds 127.0.0.1:8000 by default
@@ -64,7 +64,7 @@ cd web && npm install && npm run dev  # separate terminal — proxies /api to th
 
 Open the printed `npm run dev` URL and go to **Upload**. A successful upload
 re-exports `web/public/data/receipts.json` immediately — no separate
-`web-b-data --watch` needed alongside it.
+`web-data --watch` needed alongside it.
 
 `--host`/`--port` are configurable, but there is **no authentication** on the
 upload endpoint — only bind `--host 0.0.0.0` (to reach it from other devices)
@@ -112,7 +112,7 @@ step, and receipts.json is fetched at runtime (not baked in), so a browser
 refresh always shows the latest data:
 
 ```sh
-uv run kaufland web-b-data --watch   # keeps re-exporting as you ingest receipts
+uv run kaufland web-data --watch   # keeps re-exporting as you ingest receipts
 cd web && npm install && npm run dev # separate terminal — prints a local URL to open
 ```
 

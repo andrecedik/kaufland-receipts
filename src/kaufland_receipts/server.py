@@ -35,7 +35,7 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
         # Persisted under a unique name (not the original filename) so two
         # uploads that happen to share a name never collide; parse_pdf reads
         # from this final path, so `Receipt.source_file` points here for
-        # good, matching what export_web_b_data expects downstream.
+        # good, matching what export_web_data expects downstream.
         uploads_dir.mkdir(parents=True, exist_ok=True)
         dest = uploads_dir / f"{uuid.uuid4().hex[:8]}-{Path(file.filename).name}"
         dest.write_bytes(await file.read())
@@ -48,7 +48,7 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
         if not store.save(receipt):
             return {"status": "duplicate", "receipt_id": receipt.receipt_id}
 
-        export_mod.export_web_b_data(store.all(), web_dir)
+        export_mod.export_web_data(store.all(), web_dir)
 
         return {
             "status": "added",

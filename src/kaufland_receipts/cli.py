@@ -139,8 +139,8 @@ def _store_fingerprint(store: ReceiptStore) -> frozenset[tuple[str, float]]:
     return frozenset((p.name, p.stat().st_mtime) for p in store.receipts_dir.glob("*.json"))
 
 
-@app.command(name="web-b-data")
-def web_b_data(
+@app.command(name="web-data")
+def web_data(
     web_dir: Path = typer.Option(Path("web"), help="Path to the web/ (shadcn variant) project."),
     watch: bool = typer.Option(
         False, "--watch",
@@ -155,7 +155,7 @@ def web_b_data(
     development: Vite serves public/ live, so a re-export already shows up
     on the next browser refresh with no rebuild step. Add --watch and even
     the re-export happens on its own as you ingest receipts -- run
-    `kaufland web-b-data --watch` and `npm run dev` side by side and a
+    `kaufland web-data --watch` and `npm run dev` side by side and a
     refresh always shows the latest data.
     """
     store = _store()
@@ -163,7 +163,7 @@ def web_b_data(
     pdfs_dir = web_dir / "public" / "pdfs"
 
     def do_export() -> None:
-        count, copied = export_mod.export_web_b_data(store.all(), web_dir)
+        count, copied = export_mod.export_web_data(store.all(), web_dir)
         typer.secho(
             f"Wrote {count} receipt(s) to {data_dir / 'receipts.json'}, copied {copied} PDF(s) to {pdfs_dir}",
             fg=typer.colors.GREEN,
@@ -195,7 +195,7 @@ def serve(
     """
     store = _store()
     fastapi_app = create_app(store, web_dir)
-    export_mod.export_web_b_data(store.all(), web_dir)
+    export_mod.export_web_data(store.all(), web_dir)
     uvicorn.run(fastapi_app, host=host, port=port)
 
 
