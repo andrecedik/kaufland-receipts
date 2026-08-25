@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+import uvicorn
 
 from . import export as export_mod
 from .parse_pdf import parse_pdf
+from .server import create_app
 from .store import ReceiptStore
 from .watch import DEFAULT_WATCH_DIR, scan_once
 from .web import build_site
@@ -196,6 +198,19 @@ def web_b_data(
         if current != fingerprint:
             fingerprint = current
             do_export()
+
+
+@app.command()
+def serve(
+    web_dir: Path = typer.Option(Path("web"), help="Path to the web/ (shadcn variant) project."),
+    host: str = typer.Option("127.0.0.1", help="Host to bind."),
+    port: int = typer.Option(8000, help="Port to bind."),
+):
+    """Run the Web Upload server: accepts receipt PDFs at POST /api/upload
+    and re-exports web/public/data/receipts.json after each one.
+    """
+    fastapi_app = create_app(_store(), web_dir)
+    uvicorn.run(fastapi_app, host=host, port=port)
 
 
 if __name__ == "__main__":
