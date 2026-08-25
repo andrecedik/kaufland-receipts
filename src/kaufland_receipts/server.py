@@ -13,6 +13,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
+from . import export as export_mod
 from .parse_pdf import parse_pdf
 from .store import ReceiptStore
 
@@ -45,6 +46,8 @@ def create_app(store: ReceiptStore, web_dir: Path) -> FastAPI:
 
         if not store.save(receipt):
             return {"status": "duplicate", "receipt_id": receipt.receipt_id}
+
+        export_mod.export_web_b_data(store.all(), web_dir)
 
         return {
             "status": "added",

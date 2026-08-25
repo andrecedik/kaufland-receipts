@@ -1,5 +1,6 @@
 """Tests for the Web Upload HTTP endpoint (see CONTEXT.md's Web Upload)."""
 
+import json
 from datetime import datetime
 from decimal import Decimal
 
@@ -93,3 +94,22 @@ def test_upload_reports_a_parse_failure(tmp_path, monkeypatch):
     assert res.status_code == 422
     assert res.json() == {"detail": "not a Kaufland receipt"}
     assert store.all() == []
+
+
+def test_upload_refreshes_the_web_data(tmp_path, monkeypatch):
+    client, _store = _client(tmp_path)
+    web_dir = tmp_path / "web"
+    _install_fake_parse_pdf(monkeypatch, receipt_id="r1", total="12.34")
+
+    client.post("/api/upload", files={"file": ("receipt.pdf", b"fake pdf bytes", "application/pdf")})
+
+    receipts_json = web_dir / "public" / "data" / "receipts.json"
+    assert receipts_json.exists()
+    data = json.loads(receipts_json.read_text("utf-8"))
+    assert len(data) == 1
+    assert data[0]["receipt_id"] == "r1"
+
+    # source_file (see _install_fake_parse_pdf) points at the real bytes the
+    # endpoint persisted under store.data_dir/uploads/ before parsing, so
+    # export_web_b_data finds a real file to copy here -- not a fake.
+    assert (web_dir / "public" / "pdfs" / "r1.pdf").exists()
