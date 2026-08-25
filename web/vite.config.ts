@@ -29,7 +29,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../site-b',
+    outDir: '../site',
     emptyOutDir: true,
   },
   test: {

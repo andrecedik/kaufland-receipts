@@ -18,7 +18,6 @@ prices.jsonl
 export.csv
 export.json
 /site/
-/site-b/
 
 # shadcn/React variant (web/) — build tooling and personal data
 web/node_modules/

@@ -71,12 +71,11 @@ upload endpoint — only bind `--host 0.0.0.0` (to reach it from other devices)
 behind a trusted network or a reverse proxy that adds auth; the default
 `127.0.0.1` keeps it loopback-only.
 
-## Site (shadcn/React) — primary
+## Site (shadcn/React)
 
-[`web/`](web/) is the primary way to browse receipts: a Vite + React +
+[`web/`](web/) is the site for browsing receipts: a Vite + React +
 TypeScript app built with [shadcn/ui](https://ui.shadcn.com/), output to
-`site-b/`. It won an A/B comparison against a plain-HTML static site (below)
-on 2026-08-22 for its richer UI (search/sort, Cmd+K command palette, charts).
+`site/`.
 
 For day-to-day use, run it as a dev server instead of building — no build
 step, and receipts.json is fetched at runtime (not baked in), so a browser
@@ -92,21 +91,6 @@ to pick up new receipt data (no rebuild either way). Only build (below) when
 producing a static copy to deploy or hand off — see [`web/README.md`](web/README.md)
 for the build/preview flow and the directory mix-up to avoid there.
 
-## Static HTML site — fallback, not actively developed
-
-`site/`, built from `src/kaufland_receipts/web.py`, is a self-contained
-static site (no server, no build step, no external assets) with the same
-pages as the React variant. It lost the A/B comparison but is kept working
-as an option to fall back to if a pre-rendered, dependency-free site is ever
-needed again — it is not getting new features going forward.
-
-```sh
-uv run kaufland web   # regenerate → site/index.html
-```
-
-Open `site/index.html` directly in a browser, or serve it locally with
-`python3 -m http.server -d site`.
-
 ## Status
 
 - [x] Shared data model, idempotent store, exporters, monthly rollup (tested)
@@ -116,9 +100,7 @@ Open `site/index.html` directly in a browser, or serve it locally with
 - [x] Web Upload (`kaufland serve` + browser Upload page) — alternative
       ingestion path for non-Mac/NAS use; no auth on the endpoint yet, so it's
       loopback-only by default (see above)
-- [x] Static HTML site — kept as fallback, not actively developed (see above)
-- [x] Primary site: shadcn/React (`web/` → `site-b/`) — won the A/B comparison
-      2026-08-22
+- [x] Site: shadcn/React (`web/` → `site/`)
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
 - [ ] Home Assistant (MQTT) + Grocy stock sync

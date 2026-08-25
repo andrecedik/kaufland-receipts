@@ -1,11 +1,8 @@
-# web/ — primary site (shadcn/React, site-b)
+# web/ — the site (shadcn/React)
 
-The primary frontend for browsing receipts — it won an A/B comparison
-against the plain-HTML `site/` generator (2026-08-22), which is now kept
-only as a fallback. Same data, same warm coral/berry-plum color palette,
-same four pages (receipt list, receipt detail, item price history,
-statistics), but built with [shadcn/ui](https://ui.shadcn.com/) (Radix +
-Tailwind CSS v4) on Vite + React + TypeScript, output to `../site-b/`.
+The frontend for browsing receipts, built with [shadcn/ui](https://ui.shadcn.com/)
+(Radix + Tailwind CSS v4) on Vite + React + TypeScript. Four pages (receipt
+list, receipt detail, item price history, statistics), output to `../site/`.
 
 Needs Node `^20.19.0 || >=22.12.0` (Vite 8's bundler, Rolldown, needs
 `node:util`'s `styleText` export, missing before Node 20.12). If you use
@@ -19,8 +16,8 @@ shell (e.g. via nvm) looks like.
 ## Local development (recommended)
 
 `npm run dev` starts Vite's own dev server with hot-reload on every code
-change — no build step at all. Data isn't bundled either (see "Notable
-differences" below), so it's read straight from `public/data/receipts.json`
+change — no build step at all. Data isn't bundled either (see "Design
+notes" below), so it's read straight from `public/data/receipts.json`
 on every page load; a browser refresh always shows whatever was last
 exported there, still with zero rebuild.
 
@@ -44,7 +41,7 @@ with no refresh needed.
 
 ## Building
 
-Only needed to produce a static, deployable copy of the site (`../site-b/`)
+Only needed to produce a static, deployable copy of the site (`../site/`)
 — not for local development, see above.
 
 ```sh
@@ -55,13 +52,13 @@ uv run kaufland web-b-data
 cd web
 nvm use       # if you use nvm — matches .nvmrc
 npm install   # first time only
-npm run build # writes ../site-b/
+npm run build # writes ../site/
 ```
 
-## Viewing site-b
+## Viewing the built site
 
-Unlike `site/`, this **must be served over HTTP** — it can't be opened
-directly via `file://`. Vite's build output uses native ES module
+The build **must be served over HTTP** — it can't be opened directly via
+`file://`. Vite's build output uses native ES module
 `<script type="module">` tags, and Chrome (and other browsers) refuse to
 load those under the `file://` origin (a CORS restriction, not a bug in
 this project).
@@ -75,14 +72,14 @@ npm run preview
 # open the URL it prints (usually http://localhost:4173)
 ```
 
-Or serve the `site-b/` output directly with anything static — **note the
-directory**: it's `site-b/`, not `web/` (which holds the unbuilt Vite
+Or serve the `site/` output directly with anything static — **note the
+directory**: it's `site/`, not `web/` (which holds the unbuilt Vite
 source; serving *that* also loads without error but renders a blank page,
 since a plain static server can't process `web/index.html`'s
 `<script type="module" src="/src/main.tsx">` reference):
 
 ```sh
-cd site-b
+cd site
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
@@ -91,16 +88,15 @@ Routing is client-side (`HashRouter` — URLs look like `#/receipts/<id>`)
 specifically so the built site is a single `index.html` with no server-side
 route configuration needed; any static file server works.
 
-## Notable differences from `site/`
+## Design notes
 
 - **Data**: fetched at runtime from `public/data/receipts.json` (gitignored
   — regenerate with `kaufland web-b-data`), not bundled at build time — kept
   out of the JS bundle so the shipped chunk size doesn't grow with every
   receipt ever ingested, and so new data shows up on refresh without a
   rebuild (see "Local development" above).
-- **Theme toggle**: same idea (manual light/dark pin, persisted in
-  `localStorage`, applied before first paint to avoid a flash), implemented
-  with Tailwind's `class` dark-mode strategy (`.dark` on `<html>`) instead
-  of a `data-theme` attribute.
-- **Charts**: a small hand-built SVG sparkline component (mirrors
-  `_svg_sparkline` in the Python site), not a charting library.
+- **Theme toggle**: manual light/dark pin, persisted in `localStorage`,
+  applied before first paint to avoid a flash — implemented with Tailwind's
+  `class` dark-mode strategy (`.dark` on `<html>`).
+- **Charts**: a small hand-built SVG sparkline component, no charting
+  library dependency.
