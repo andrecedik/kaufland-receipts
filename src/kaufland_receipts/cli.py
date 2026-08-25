@@ -190,7 +190,8 @@ def serve(
     port: int = typer.Option(8000, help="Port to bind."),
 ):
     """Run the Web Upload server: accepts receipt PDFs at POST /api/upload
-    and re-exports web/public/data/receipts.json after each one.
+    and re-exports web/public/data/receipts.json after each one, plus once
+    at startup so existing data shows up immediately after a restart.
     """
     store = _store()
     fastapi_app = create_app(store, web_dir)
