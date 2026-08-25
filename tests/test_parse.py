@@ -70,7 +70,8 @@ def test_line_shapes():
 
 def test_discounts_are_negative_line_items():
     discounts = [li for li in parse_text(FIXTURE).line_items if li.tax_class is None]
-    assert len(discounts) == 3  # per-item Rabatt, Mengenrabatt, Rabattaktion
+    assert len(discounts) == 2  # per-item Rabatt, Mengenrabatt -- the Rabattaktion
+    # block's final K Card XTRA Rabatt is threshold_coupon_discount, not a line item
     assert all(li.total_price < 0 for li in discounts)
     assert {li.name for li in discounts} == {"K Card XTRA Rabatt", "Mengenrabatt"}
 
@@ -80,6 +81,16 @@ def test_refund_is_not_a_discount():
     # not be picked up by the (name-agnostic) discount pattern.
     items = {li.name: li for li in parse_text(FIXTURE).line_items}
     assert items["Testleergut"].tax_class == "B"
+
+
+def test_rabattaktion_discount_is_separated_from_line_items():
+    r = parse_text(FIXTURE)
+    assert r.threshold_coupon_discount == Decimal("-0.75")
+    # not double-counted as a line item
+    assert sum(1 for li in r.line_items if li.name == "K Card XTRA Rabatt") == 1
+    # still reconciles: line items + the coupon = the printed total
+    assert r.line_item_sum() == r.total
+    assert r.totals_match()
 
 
 def test_rejects_non_kaufland():

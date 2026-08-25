@@ -60,9 +60,19 @@ class Receipt(BaseModel):
     source: str = "pdf"  # "pdf" | "api"
     source_file: str | None = None  # path to the originating PDF, if source == "pdf"
 
+    # The Rabattaktion block's whole-cart, K-Card-linked, manually-activated
+    # spend-threshold coupon (e.g. "save EUR 5 once your cart crosses EUR 50")
+    # -- never attributable to a single item, kept separate from line_items
+    # for exactly that reason. None when a receipt has no such coupon.
+    threshold_coupon_discount: Decimal | None = None
+
     def line_item_sum(self) -> Decimal:
-        """Sum of line totals — should equal ``total`` on a well-parsed receipt."""
-        return sum((li.total_price for li in self.line_items), Decimal(0))
+        """Sum of line totals plus the whole-cart threshold coupon, if any --
+        should equal ``total`` on a well-parsed receipt."""
+        return (
+            sum((li.total_price for li in self.line_items), Decimal(0))
+            + (self.threshold_coupon_discount or Decimal(0))
+        )
 
     def totals_match(self) -> bool:
         """True when parsed line items reconcile with the printed total.

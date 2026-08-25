@@ -102,6 +102,7 @@ def _size_for(name: str, *, weight: Decimal | None = None) -> tuple[Decimal | No
     return _extract_size(name)
 
 _SUMME = re.compile(r"^Summe\s+(?P<amt>-?\d+,\d{2})$")
+_ZWISCHENSUMME = re.compile(r"^Zwischensumme\s+\d+,\d{2}$")
 _DATE = re.compile(r"Datum:\s*(\d{2})\.(\d{2})\.(\d{2,4})\s+Zeit:\s*(\d{2}):(\d{2}):(\d{2})")
 _RECEIPT_NO = re.compile(r"Bon:\s*(\d+)")
 _FILIALE = re.compile(r"Filiale:\s*(\d+)\s+Kasse:\s*(\d+)")
@@ -152,16 +153,22 @@ def _receipt_id(text: str, purchased_at: datetime) -> str:
     return f"kaufland-{store_no}-{till}-{purchased_at:%Y%m%d}-{bon_no}"
 
 
-def _parse_line_items(lines: list[str]) -> list[LineItem]:
+def _parse_line_items(lines: list[str]) -> tuple[list[LineItem], Decimal | None]:
     """Walk the body between the 'Preis EUR' header and 'Summe'.
 
-    Products are captured at their printed price; discount lines (see
-    ``_DISCOUNT``) are captured as negative line items. This is what makes the line-item sum
-    reconcile to the printed total.
+    Products are captured at their printed price; per-item discount lines
+    (see ``_DISCOUNT``) are captured as negative line items -- this is what
+    makes the line-item sum reconcile to the printed total. Discount lines
+    seen after ``Zwischensumme`` belong to the ``Rabattaktion`` block's
+    whole-cart threshold coupon, not any single product, so they're summed
+    separately instead of becoming a LineItem (see
+    ``Receipt.threshold_coupon_discount``).
     """
     items: list[LineItem] = []
     pending_name: str | None = None
     in_body = False
+    past_zwischensumme = False
+    threshold_coupon_discount: Decimal | None = None
 
     for ln in lines:
         if "Preis EUR" in ln:
@@ -171,8 +178,18 @@ def _parse_line_items(lines: list[str]) -> list[LineItem]:
             continue
         if _SUMME.match(ln):  # end of the item region
             break
+        if _ZWISCHENSUMME.match(ln):
+            past_zwischensumme = True
+            continue
 
         if m := _DISCOUNT.match(ln):
+            if past_zwischensumme:
+                amt = _money(m["amt"])
+                threshold_coupon_discount = (
+                    amt if threshold_coupon_discount is None
+                    else threshold_coupon_discount + amt
+                )
+                continue
             size_value, size_unit = _size_for(m["name"])
             items.append(LineItem(
                 name=m["name"], total_price=_money(m["amt"]),
@@ -232,7 +249,7 @@ def _parse_line_items(lines: list[str]) -> list[LineItem]:
             kw in ln for kw in ("Zwischensumme", "Steuer", "Kaufland Pay", "----")
         ):
             pending_name = ln
-    return items
+    return items, threshold_coupon_discount
 
 
 def parse_text(text: str, *, source_file: str | None = None, label: str = "receipt") -> Receipt:
@@ -258,11 +275,14 @@ def parse_text(text: str, *, source_file: str | None = None, label: str = "recei
     if not summe:
         raise ValueError(f"{label}: could not find the total (Summe)")
 
+    line_items, threshold_coupon_discount = _parse_line_items(lines)
+
     return Receipt(
         receipt_id=_receipt_id(text, purchased_at),
         purchased_at=purchased_at,
         store=_parse_store(lines),
-        line_items=_parse_line_items(lines),
+        line_items=line_items,
+        threshold_coupon_discount=threshold_coupon_discount,
         total=_money(summe["amt"]),
         source="pdf",
         source_file=source_file,
