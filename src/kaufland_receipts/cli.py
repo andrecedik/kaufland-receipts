@@ -192,7 +192,9 @@ def serve(
     """Run the Web Upload server: accepts receipt PDFs at POST /api/upload
     and re-exports web/public/data/receipts.json after each one.
     """
-    fastapi_app = create_app(_store(), web_dir)
+    store = _store()
+    fastapi_app = create_app(store, web_dir)
+    export_mod.export_web_b_data(store.all(), web_dir)
     uvicorn.run(fastapi_app, host=host, port=port)
 
 
