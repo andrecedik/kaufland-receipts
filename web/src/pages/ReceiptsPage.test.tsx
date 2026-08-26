@@ -22,6 +22,7 @@ function receipt(i: number): Receipt {
     source: "test",
     source_file: null,
     pdf_available: false,
+    threshold_coupon_discount: null,
   }
 }
 

@@ -29,6 +29,7 @@ function receipt(overrides: Partial<Receipt>): Receipt {
     source: "test",
     source_file: null,
     pdf_available: false,
+    threshold_coupon_discount: null,
     ...overrides,
   }
 }
@@ -71,19 +72,39 @@ describe("mergeDuplicateLines", () => {
 
 describe("totalSaved", () => {
   it("sums discount lines (no tax class, negative total)", () => {
-    const saved = totalSaved([
-      lineItem({ name: "K Card XTRA Rabatt", tax_class: null, total_price: "-0.50" }),
-      lineItem({ name: "Mengenrabatt", tax_class: null, total_price: "-0.30" }),
-    ])
+    const saved = totalSaved(
+      receipt({
+        line_items: [
+          lineItem({ name: "K Card XTRA Rabatt", tax_class: null, total_price: "-0.50" }),
+          lineItem({ name: "Mengenrabatt", tax_class: null, total_price: "-0.30" }),
+        ],
+      }),
+    )
     expect(saved).toBeCloseTo(0.8)
   })
 
   it("excludes Pfand/Leergut refunds, which carry a tax class", () => {
-    const saved = totalSaved([
-      lineItem({ name: "K Card XTRA Rabatt", tax_class: null, total_price: "-0.50" }),
-      lineItem({ name: "Leergut", tax_class: "A", total_price: "-0.25" }),
-    ])
+    const saved = totalSaved(
+      receipt({
+        line_items: [
+          lineItem({ name: "K Card XTRA Rabatt", tax_class: null, total_price: "-0.50" }),
+          lineItem({ name: "Leergut", tax_class: "A", total_price: "-0.25" }),
+        ],
+      }),
+    )
     expect(saved).toBeCloseTo(0.5)
+  })
+
+  it("includes the whole-cart threshold coupon on top of per-item discounts", () => {
+    const saved = totalSaved(
+      receipt({
+        line_items: [
+          lineItem({ name: "K Card XTRA Rabatt", tax_class: null, total_price: "-0.50" }),
+        ],
+        threshold_coupon_discount: "-0.75",
+      }),
+    )
+    expect(saved).toBeCloseTo(1.25)
   })
 })
 
@@ -104,6 +125,23 @@ describe("totalsMatch", () => {
   it("is false clearly beyond the 0.005 tolerance", () => {
     const r = receipt({ total: "1.00", line_items: [lineItem({ total_price: "1.006" })] })
     expect(totalsMatch(r)).toBe(false)
+  })
+
+  it("is true when a whole-cart threshold coupon accounts for the gap between line items and total", () => {
+    // line_items alone sum to 8.95 (more than the printed total of 8.20)
+    // because the whole-cart Rabattaktion coupon was pulled out of
+    // line_items on the backend -- threshold_coupon_discount makes up
+    // exactly the difference.
+    const r = receipt({
+      total: "8.20",
+      line_items: [
+        lineItem({ tax_class: "B", total_price: "2.00" }),
+        lineItem({ tax_class: "B", total_price: "6.95" }),
+      ],
+      threshold_coupon_discount: "-0.75",
+    })
+    expect(totalsMatch(r)).toBe(true)
+    expect(totalSaved(r)).toBeCloseTo(0.75)
   })
 })
 

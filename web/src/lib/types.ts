@@ -39,6 +39,10 @@ export interface Receipt {
   currency: string
   source: string
   source_file: string | null
+  // Whole-cart Rabattaktion coupon, pulled out of line_items so it's never
+  // mis-attributed to a single item -- see Receipt.threshold_coupon_discount
+  // in the backend models. Included in lineItemSum()/totalSaved() below.
+  threshold_coupon_discount: string | null
   // Whether web-data actually copied the PDF into public/pdfs/ -- distinct
   // from source_file, which is the ingest-time path and can go stale.
   pdf_available: boolean

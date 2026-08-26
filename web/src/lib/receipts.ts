@@ -76,14 +76,19 @@ export function mergeDuplicateLines(lineItems: LineItem[]): LineItem[] {
  * also negative but always carry a tax class and are deposit money back,
  * not a saving -- mirrors `_total_saved` in the Python site generator.
  */
-export function totalSaved(lineItems: LineItem[]): number {
-  return -lineItems
+export function totalSaved(receipt: Receipt): number {
+  const lineDiscounts = -receipt.line_items
     .filter((li) => li.tax_class === null && num(li.total_price) < 0)
     .reduce((sum, li) => sum + num(li.total_price), 0)
+  const coupon = -num(receipt.threshold_coupon_discount)
+  return lineDiscounts + coupon
 }
 
 export function lineItemSum(receipt: Receipt): number {
-  return receipt.line_items.reduce((sum, li) => sum + num(li.total_price), 0)
+  return (
+    receipt.line_items.reduce((sum, li) => sum + num(li.total_price), 0) +
+    num(receipt.threshold_coupon_discount)
+  )
 }
 
 export function totalsMatch(receipt: Receipt): boolean {

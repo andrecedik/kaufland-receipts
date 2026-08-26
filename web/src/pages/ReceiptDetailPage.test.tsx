@@ -46,6 +46,7 @@ function receipt(overrides: Partial<Receipt>): Receipt {
     source: "pdf",
     source_file: null,
     pdf_available: false,
+    threshold_coupon_discount: null,
     ...overrides,
   }
 }

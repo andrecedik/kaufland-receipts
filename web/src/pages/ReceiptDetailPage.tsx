@@ -32,7 +32,7 @@ export function ReceiptDetailPage() {
   }
 
   const merged = mergeDuplicateLines(receipt.line_items)
-  const saved = totalSaved(receipt.line_items)
+  const saved = totalSaved(receipt)
   const matches = totalsMatch(receipt)
   const address = [receipt.store.street, `${receipt.store.postal_code ?? ""} ${receipt.store.city ?? ""}`.trim()]
     .filter(Boolean)

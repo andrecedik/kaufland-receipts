@@ -26,7 +26,7 @@ export function ReceiptsPage() {
   const [pageSize, setPageSize] = useState<PageSize>(10)
 
   const grandTotal = receipts.reduce((sum, r) => sum + num(r.total), 0)
-  const grandSaved = receipts.reduce((sum, r) => sum + totalSaved(r.line_items), 0)
+  const grandSaved = receipts.reduce((sum, r) => sum + totalSaved(r), 0)
   const rows = filterAndSortReceipts(receipts, query, sortKey, sortDir)
 
   // Clamped rather than stored directly -- a filter/sort/page-size change
