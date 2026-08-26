@@ -2,39 +2,24 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
-type UploadState =
-  | { kind: "idle" }
+type RowStatus =
+  | { kind: "pending" }
   | { kind: "uploading" }
   | { kind: "added"; total: string; currency: string }
   | { kind: "duplicate" }
   | { kind: "error"; message: string }
 
+type UploadRow = {
+  file: File
+  status: RowStatus
+}
+
 export function UploadPage() {
-  const [file, setFile] = useState<File | null>(null)
-  const [state, setState] = useState<UploadState>({ kind: "idle" })
+  const [rows, setRows] = useState<UploadRow[]>([])
 
-  async function handleUpload() {
-    if (!file) return
-    setState({ kind: "uploading" })
-
-    const body = new FormData()
-    body.append("file", file)
-
-    try {
-      const res = await fetch("/api/upload", { method: "POST", body })
-      const data = await res.json()
-      if (!res.ok) {
-        setState({ kind: "error", message: data.detail ?? "Upload failed." })
-        return
-      }
-      if (data.status === "duplicate") {
-        setState({ kind: "duplicate" })
-      } else {
-        setState({ kind: "added", total: data.total, currency: data.currency })
-      }
-    } catch {
-      setState({ kind: "error", message: "Could not reach the server." })
-    }
+  function handleSelect(fileList: FileList | null) {
+    const files = fileList ? Array.from(fileList) : []
+    setRows(files.map((file) => ({ file, status: { kind: "pending" } })))
   }
 
   return (
@@ -43,22 +28,41 @@ export function UploadPage() {
         <input
           type="file"
           accept="application/pdf"
-          aria-label="Receipt PDF"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          multiple
+          aria-label="Receipt PDFs"
+          onChange={(e) => handleSelect(e.target.files)}
         />
-        <Button onClick={handleUpload} disabled={!file || state.kind === "uploading"}>
-          {state.kind === "uploading" ? "Uploading..." : "Upload receipt"}
-        </Button>
-        {state.kind === "added" && (
-          <p className="text-sm text-muted-foreground">
-            Added — {state.total} {state.currency}.
-          </p>
+        <Button disabled={rows.length === 0}>Upload receipts</Button>
+        {rows.length > 0 && (
+          <ul className="flex flex-col gap-1 text-sm">
+            {rows.map((row, i) => (
+              <li key={i} className="flex justify-between gap-4">
+                <span className="truncate">{row.file.name}</span>
+                <RowStatusLabel status={row.status} />
+              </li>
+            ))}
+          </ul>
         )}
-        {state.kind === "duplicate" && (
-          <p className="text-sm text-muted-foreground">Already in the store.</p>
-        )}
-        {state.kind === "error" && <p className="text-sm text-destructive">{state.message}</p>}
       </CardContent>
     </Card>
   )
+}
+
+function RowStatusLabel({ status }: { status: RowStatus }) {
+  switch (status.kind) {
+    case "pending":
+      return <span className="text-muted-foreground">Pending</span>
+    case "uploading":
+      return <span className="text-muted-foreground">Uploading...</span>
+    case "added":
+      return (
+        <span className="text-muted-foreground">
+          Added — {status.total} {status.currency}
+        </span>
+      )
+    case "duplicate":
+      return <span className="text-muted-foreground">Already in the store</span>
+    case "error":
+      return <span className="text-destructive">{status.message}</span>
+  }
 }

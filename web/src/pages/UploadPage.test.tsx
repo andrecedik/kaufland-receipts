@@ -1,64 +1,29 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, describe, expect, it } from "vitest"
 import { UploadPage } from "./UploadPage"
 
 afterEach(cleanup)
 
-const PDF = new File(["%PDF-1.4"], "receipt.pdf", { type: "application/pdf" })
-
-function selectFile(input: HTMLElement, file: File) {
-  fireEvent.change(input, { target: { files: [file] } })
+function makePdf(name: string) {
+  return new File(["%PDF-1.4"], name, { type: "application/pdf" })
 }
 
-beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn())
-})
+function selectFiles(input: HTMLElement, files: File[]) {
+  fireEvent.change(input, { target: { files } })
+}
 
 describe("UploadPage", () => {
-  it("uploads the selected file and shows the added total", async () => {
-    ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ status: "added", receipt_id: "r1", total: "12.34", currency: "EUR" }),
-    })
+  it("renders a pending row for each selected file", () => {
     render(<UploadPage />)
 
-    selectFile(screen.getByLabelText("Receipt PDF"), PDF)
-    fireEvent.click(screen.getByRole("button", { name: /upload receipt/i }))
+    selectFiles(screen.getByLabelText("Receipt PDFs"), [
+      makePdf("receipt-1.pdf"),
+      makePdf("receipt-2.pdf"),
+    ])
 
-    await waitFor(() => {
-      expect(screen.getByText(/added/i)).toBeTruthy()
-    })
-    expect(fetch).toHaveBeenCalledWith("/api/upload", expect.objectContaining({ method: "POST" }))
-  })
-
-  it("shows a duplicate message when the receipt is already stored", async () => {
-    ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => ({ status: "duplicate", receipt_id: "r1" }),
-    })
-    render(<UploadPage />)
-
-    selectFile(screen.getByLabelText("Receipt PDF"), PDF)
-    fireEvent.click(screen.getByRole("button", { name: /upload receipt/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText(/already in the store/i)).toBeTruthy()
-    })
-  })
-
-  it("shows the server's error detail on a failed upload", async () => {
-    ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      json: async () => ({ detail: "Only PDF files are supported." }),
-    })
-    render(<UploadPage />)
-
-    selectFile(screen.getByLabelText("Receipt PDF"), PDF)
-    fireEvent.click(screen.getByRole("button", { name: /upload receipt/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText("Only PDF files are supported.")).toBeTruthy()
-    })
+    expect(screen.getByText("receipt-1.pdf")).toBeTruthy()
+    expect(screen.getByText("receipt-2.pdf")).toBeTruthy()
+    expect(screen.getAllByText("Pending")).toHaveLength(2)
   })
 })
