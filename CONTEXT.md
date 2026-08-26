@@ -45,7 +45,7 @@ The Mac-native ingestion path — `kaufland watch` polls a local iCloud Drive fo
 _Avoid_: Watcher, ingestion (when a specific mechanism is meant)
 
 **Web Upload**:
-The Docker/NAS-native ingestion path — dragging a receipt PDF/PNG into the web UI. Chosen as the primary ingestion mechanism for the Initial Target Audience because it works identically regardless of host OS/NAS platform, unlike Folder Watch.
+The Docker/NAS-native ingestion path — selecting one or more receipt PDFs into the web UI's file picker. Chosen as the primary ingestion mechanism for the Initial Target Audience because it works identically regardless of host OS/NAS platform, unlike Folder Watch. PDF-only, matching Folder Watch and `parse_pdf`; PNG was an earlier aspiration never built and is not currently planned.
 _Avoid_: Upload feature
 
 **Analytics Surface**:
