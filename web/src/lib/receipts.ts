@@ -8,10 +8,27 @@ import type { LineItem, PriceVerdict, Receipt } from "@/lib/types"
 // over `receipts` sees the loaded data without needing its own fetch.
 export const receipts: Receipt[] = []
 
-export async function loadReceipts(): Promise<void> {
+async function fetchReceipts(): Promise<Receipt[]> {
   const res = await fetch("data/receipts.json")
-  const data = (await res.json()) as Receipt[]
+  return (await res.json()) as Receipt[]
+}
+
+export async function loadReceipts(): Promise<void> {
+  receipts.push(...(await fetchReceipts()))
+}
+
+/**
+ * Re-fetches data/receipts.json and replaces `receipts`' contents in place
+ * (same array reference, so every function below that closed over it stays
+ * valid) -- used after a Web Upload batch finishes, since `receipts` is
+ * otherwise only ever loaded once, at app boot. Also drops the itemSlugs()
+ * cache, which relied on `receipts` never changing until this existed.
+ */
+export async function refreshReceipts(): Promise<void> {
+  const data = await fetchReceipts()
+  receipts.length = 0
   receipts.push(...data)
+  cachedItemSlugs = null
 }
 
 export function num(value: string | null): number {
@@ -161,8 +178,9 @@ let cachedItemSlugs: Map<string, string> | null = null
  * name in itemPriceHistory(). Plain slugify() can collide (e.g. two names
  * differing only by punctuation or an umlaut); this appends -2, -3, ... to
  * any name whose base slug is already taken, so distinct items never share
- * a route. `receipts` is loaded once via loadReceipts() before the app
- * renders and never changes afterward, so this is safe to cache.
+ * a route. `receipts` only changes via loadReceipts() at boot or
+ * refreshReceipts() after a Web Upload batch -- both invalidate this cache
+ * (the latter explicitly resets cachedItemSlugs), so memoizing here is safe.
  */
 export function itemSlugs(): Map<string, string> {
   if (cachedItemSlugs) return cachedItemSlugs

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { refreshReceipts } from "@/lib/receipts"
 
 type RowStatus =
   | { kind: "pending" }
@@ -56,6 +57,15 @@ export function UploadPage() {
       setRowStatus(i, { kind: "uploading" })
       const status = await uploadFile(rows[i].file)
       setRowStatus(i, status)
+    }
+    try {
+      // So the Receipts page shows new uploads without a manual reload --
+      // it otherwise only reads `receipts` once, at app boot.
+      await refreshReceipts()
+    } catch {
+      // Best-effort: every row's own status is already shown above, so a
+      // failed refresh just means a manual reload is still needed, same as
+      // before this existed -- not worth surfacing as an upload error.
     }
     setUploading(false)
   }

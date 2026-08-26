@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest"
-import { filterAndSortReceipts, mergeDuplicateLines, totalSaved, totalsMatch } from "@/lib/receipts"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import {
+  filterAndSortReceipts,
+  itemSlugs,
+  mergeDuplicateLines,
+  receipts,
+  refreshReceipts,
+  totalSaved,
+  totalsMatch,
+} from "@/lib/receipts"
 import type { LineItem, Receipt, Store } from "@/lib/types"
 
 const STORE: Store = { name: "Kaufland Test", street: null, city: null, postal_code: null }
@@ -211,5 +219,51 @@ describe("filterAndSortReceipts", () => {
   it("sorts by total, descending", () => {
     const desc = filterAndSortReceipts(receiptsList, "", "total", "desc")
     expect(desc.map((r) => r.total)).toEqual(["30.00", "20.00", "10.00"])
+  })
+})
+
+describe("refreshReceipts", () => {
+  afterEach(() => {
+    receipts.length = 0
+    vi.unstubAllGlobals()
+  })
+
+  it("replaces the contents of receipts in place with freshly fetched data", async () => {
+    receipts.push(receipt({ receipt_id: "stale" }))
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: async () => [receipt({ receipt_id: "fresh-1" }), receipt({ receipt_id: "fresh-2" })],
+      }),
+    )
+
+    await refreshReceipts()
+
+    expect(receipts.map((r) => r.receipt_id)).toEqual(["fresh-1", "fresh-2"])
+  })
+
+  it("invalidates the itemSlugs cache so newly refreshed items get a slug", async () => {
+    receipts.push(
+      receipt({
+        receipt_id: "old",
+        line_items: [lineItem({ name: "Milch", unit_price: "1.00", total_price: "1.00" })],
+      }),
+    )
+    expect(itemSlugs().has("Kaffee")).toBe(false)
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: async () => [
+          receipt({
+            receipt_id: "new",
+            line_items: [lineItem({ name: "Kaffee", unit_price: "3.00", total_price: "3.00" })],
+          }),
+        ],
+      }),
+    )
+    await refreshReceipts()
+
+    expect(itemSlugs().has("Kaffee")).toBe(true)
   })
 })

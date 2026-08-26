@@ -50,6 +50,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ status: "duplicate", receipt_id: "r2" }),
       })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
     render(<UploadPage />)
     selectFiles(screen.getByLabelText("Receipt PDFs"), [
       makePdf("receipt-1.pdf"),
@@ -64,7 +65,8 @@ describe("UploadPage", () => {
         "Already in the store",
       )
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "data/receipts.json")
   })
 
   it("continues past a failed file and uploads the rest", async () => {
@@ -78,6 +80,7 @@ describe("UploadPage", () => {
         ok: true,
         json: async () => ({ status: "added", receipt_id: "r2", total: "5.00", currency: "EUR" }),
       })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
     render(<UploadPage />)
     selectFiles(screen.getByLabelText("Receipt PDFs"), [
       makePdf("bad.pdf"),
@@ -92,14 +95,57 @@ describe("UploadPage", () => {
       )
       expect(screen.getByText("receipt-2.pdf").closest("li")?.textContent).toContain("Added")
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "data/receipts.json")
+  })
+
+  it("refreshes the shared receipts data once the whole batch finishes", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "added", receipt_id: "r1", total: "12.34", currency: "EUR" }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    render(<UploadPage />)
+    selectFiles(screen.getByLabelText("Receipt PDFs"), [makePdf("receipt-1.pdf")])
+
+    fireEvent.click(screen.getByRole("button", { name: /upload receipts/i }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "data/receipts.json")
+  })
+
+  it("does not let a failed refresh break the upload flow", async () => {
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "added", receipt_id: "r1", total: "12.34", currency: "EUR" }),
+      })
+      .mockRejectedValueOnce(new Error("network down"))
+    render(<UploadPage />)
+    selectFiles(screen.getByLabelText("Receipt PDFs"), [makePdf("receipt-1.pdf")])
+
+    fireEvent.click(screen.getByRole("button", { name: /upload receipts/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText("receipt-1.pdf").closest("li")?.textContent).toContain("Added")
+    })
+    await waitFor(() => {
+      const button = screen.getByRole("button", { name: /upload receipts/i }) as HTMLButtonElement
+      expect(button.disabled).toBe(false)
+    })
   })
 
   it("uploads one file at a time, not in parallel", async () => {
     const first = deferred<{ ok: boolean; json: () => Promise<unknown> }>()
     const second = deferred<{ ok: boolean; json: () => Promise<unknown> }>()
     const fetchMock = fetch as ReturnType<typeof vi.fn>
-    fetchMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    fetchMock
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValueOnce({ ok: true, json: async () => [] })
     render(<UploadPage />)
     selectFiles(screen.getByLabelText("Receipt PDFs"), [
       makePdf("receipt-1.pdf"),
