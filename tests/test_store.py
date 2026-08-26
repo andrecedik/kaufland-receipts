@@ -1,6 +1,7 @@
 """Tests for the format-independent core: model reconciliation, store idempotency,
 and the export/rollup functions. These need no real PDF and no network."""
 
+import json
 from datetime import datetime
 from decimal import Decimal
 
@@ -98,3 +99,43 @@ def test_monthly_summary_groups_by_month():
     assert "2026-08" in md and "2026-07" in md
     assert "10.00" in md   # August total
     assert "14.00" in md   # grand total
+
+
+def _milch_receipt(rid: str, when: str, total_price: str, discount: str | None = None) -> Receipt:
+    """A receipt with one Milch line item (and, optionally, an attached
+    per-item discount) at a fixed store location -- built directly rather
+    than via the module's existing `_receipt()` helper, since that helper
+    hardcodes its own MILCH/BROT line items and doesn't accept overrides."""
+    line_items = [
+        LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal(total_price),
+                  total_price=Decimal(total_price), tax_class="B"),
+    ]
+    if discount is not None:
+        line_items.append(LineItem(name="K Card XTRA Rabatt", total_price=Decimal(discount)))
+    total = sum((li.total_price for li in line_items), Decimal(0))
+    return Receipt(
+        receipt_id=rid, purchased_at=datetime.fromisoformat(when),
+        store=Store(name="Kaufland", street="Teststraße 1"),
+        line_items=line_items, total=total,
+    )
+
+
+def test_export_web_data_attaches_price_verdicts(tmp_path):
+    r1 = _milch_receipt("r1", "2026-01-01T10:00:00", total_price="2.00")
+    r2 = _milch_receipt("r2", "2026-01-08T10:00:00", total_price="2.00")
+    r3 = _milch_receipt("r3", "2026-01-15T10:00:00", total_price="2.00", discount="-0.30")
+
+    web_dir = tmp_path / "web"
+    export_web_data([r1, r2, r3], web_dir)
+
+    data = json.loads((web_dir / "public" / "data" / "receipts.json").read_text("utf-8"))
+    r3_record = next(rec for rec in data if rec["receipt_id"] == "r3")
+    verdict = r3_record["line_items"][0]["price_verdict"]
+    assert verdict["label"] == "genuine"
+    assert verdict["median_price"] == "2.00"
+    assert verdict["current_price"] == "1.70"
+    # the discount line itself never gets a verdict
+    assert "price_verdict" not in r3_record["line_items"][1]
+    # receipts with no qualifying discount have no price_verdict key at all
+    r1_record = next(rec for rec in data if rec["receipt_id"] == "r1")
+    assert "price_verdict" not in r1_record["line_items"][0]

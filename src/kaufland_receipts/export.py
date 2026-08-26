@@ -19,6 +19,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from .models import Receipt
+from .price_integrity import compute_verdicts
 from .store import ReceiptStore
 
 
@@ -104,10 +105,13 @@ def export_web_data(receipts: list[Receipt], web_dir: Path) -> tuple[int, int]:
     # stale path string (see kaufland-receipts code review finding #6).
     copied = 0
     records = []
+    verdicts = compute_verdicts(receipts)
     for r in receipts:
         record = r.model_dump(mode="json")
         pdf_available = bool(r.source_file and Path(r.source_file).exists())
         record["pdf_available"] = pdf_available
+        for index, verdict in verdicts.get(r.receipt_id, {}).items():
+            record["line_items"][index]["price_verdict"] = verdict.model_dump(mode="json")
         if pdf_available:
             shutil.copy2(r.source_file, pdfs_dir / f"{r.receipt_id}.pdf")
             copied += 1
