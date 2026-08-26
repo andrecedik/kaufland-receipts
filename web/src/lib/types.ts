@@ -3,6 +3,14 @@
 // numbers here; this is a read-only display layer, not a place that needs
 // arbitrary-precision arithmetic.
 
+export interface PriceVerdict {
+  median_price: string
+  current_price: string
+  percent_delta: string
+  label: string
+  observation_count: number
+}
+
 export interface LineItem {
   name: string
   quantity: string
@@ -12,6 +20,7 @@ export interface LineItem {
   article_number: string | null
   size_value: string | null
   size_unit: string | null
+  price_verdict?: PriceVerdict
 }
 
 export interface Store {

@@ -1,5 +1,5 @@
 import { fmtDateTime } from "@/lib/format"
-import type { LineItem, Receipt } from "@/lib/types"
+import type { LineItem, PriceVerdict, Receipt } from "@/lib/types"
 
 // Fetched at runtime from public/data/receipts.json rather than imported as
 // a JS module -- an import gets inlined straight into the main bundle, so
@@ -20,6 +20,13 @@ export function num(value: string | null): number {
 
 export function fmtMoney(value: number, currency = "EUR"): string {
   return `${value.toFixed(2)} ${currency}`
+}
+
+export function formatVerdict(v: PriceVerdict): string {
+  const pct = Math.round(Math.abs(num(v.percent_delta)))
+  if (v.label === "genuine") return `${pct}% below your usual price`
+  if (v.label === "worse_than_usual") return `${pct}% above your usual price`
+  return `Only ${pct}% off — not much of a bargain`
 }
 
 export function slugify(text: string): string {

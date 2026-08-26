@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/drawer"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
-import { fmtMoney, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
+import { fmtMoney, formatVerdict, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
 
 export function ReceiptDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -118,6 +118,11 @@ export function ReceiptDetailPage() {
                   {li.size_value !== null && (
                     <Badge variant="secondary" className="ml-2">
                       {Number(li.size_value)} {li.size_unit}
+                    </Badge>
+                  )}
+                  {li.price_verdict && (
+                    <Badge variant={li.price_verdict.label === "genuine" ? "default" : "secondary"} className="ml-2">
+                      {formatVerdict(li.price_verdict)}
                     </Badge>
                   )}
                 </TableCell>

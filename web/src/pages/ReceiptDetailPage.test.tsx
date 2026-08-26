@@ -97,3 +97,37 @@ describe("ReceiptDetailPage ingestion-info drawer", () => {
     expect(screen.getByText("⚠ line items sum to 3.50, printed total is 999.99")).toBeTruthy()
   })
 })
+
+describe("ReceiptDetailPage price verdicts", () => {
+  it("shows a verdict badge next to a line item that has one", () => {
+    receipts.push(
+      receipt({
+        line_items: [
+          lineItem({
+            name: "Milch",
+            total_price: "1.70",
+            price_verdict: {
+              median_price: "2.00",
+              current_price: "1.70",
+              percent_delta: "-15.0",
+              label: "genuine",
+              observation_count: 2,
+            },
+          }),
+        ],
+        total: "1.70",
+      }),
+    )
+    renderDetail("kaufland-test-1")
+
+    expect(screen.getByText("15% below your usual price")).toBeTruthy()
+  })
+
+  it("shows nothing extra for a line item with no verdict", () => {
+    receipts.push(receipt({ line_items: [lineItem({ name: "Brot", total_price: "1.50" })], total: "1.50" }))
+    renderDetail("kaufland-test-1")
+
+    expect(screen.queryByText(/your usual price/)).toBeNull()
+    expect(screen.queryByText(/not much of a bargain/)).toBeNull()
+  })
+})
