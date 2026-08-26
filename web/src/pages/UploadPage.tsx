@@ -16,10 +16,48 @@ type UploadRow = {
 
 export function UploadPage() {
   const [rows, setRows] = useState<UploadRow[]>([])
+  const [uploading, setUploading] = useState(false)
 
   function handleSelect(fileList: FileList | null) {
     const files = fileList ? Array.from(fileList) : []
     setRows(files.map((file) => ({ file, status: { kind: "pending" } })))
+  }
+
+  function setRowStatus(index: number, status: RowStatus) {
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, status } : row)))
+  }
+
+  async function uploadFile(file: File): Promise<RowStatus> {
+    const body = new FormData()
+    body.append("file", file)
+
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body })
+      const data = await res.json()
+      if (!res.ok) {
+        return { kind: "error", message: data.detail ?? "Upload failed." }
+      }
+      if (data.status === "duplicate") {
+        return { kind: "duplicate" }
+      }
+      return { kind: "added", total: data.total, currency: data.currency }
+    } catch {
+      return { kind: "error", message: "Could not reach the server." }
+    }
+  }
+
+  async function handleUpload() {
+    setUploading(true)
+    // Sequential, not Promise.all: a self-hosted/NAS server (CONTEXT.md's
+    // Web Upload) shouldn't take N concurrent parse_pdf + full-store
+    // export_web_data calls from one batch. Continuing past a failed file
+    // (rather than aborting) matches watch.py's scan_once.
+    for (let i = 0; i < rows.length; i++) {
+      setRowStatus(i, { kind: "uploading" })
+      const status = await uploadFile(rows[i].file)
+      setRowStatus(i, status)
+    }
+    setUploading(false)
   }
 
   return (
@@ -30,9 +68,12 @@ export function UploadPage() {
           accept="application/pdf"
           multiple
           aria-label="Receipt PDFs"
+          disabled={uploading}
           onChange={(e) => handleSelect(e.target.files)}
         />
-        <Button disabled={rows.length === 0}>Upload receipts</Button>
+        <Button onClick={handleUpload} disabled={rows.length === 0 || uploading}>
+          {uploading ? "Uploading..." : "Upload receipts"}
+        </Button>
         {rows.length > 0 && (
           <ul className="flex flex-col gap-1 text-sm">
             {rows.map((row, i) => (
