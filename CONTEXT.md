@@ -5,8 +5,8 @@ A personal tool that parses your own grocery digital receipts into structured sp
 ## Language
 
 **Price Integrity Check**:
-Comparing a product's current price/unit-price against its own price history at the same store, to flag whether an advertised sale is a genuine reduction (as opposed to a shrunk pack size or a fake discount). Uses only the user's own historical data — no other users' data required.
-_Avoid_: Price trends, bargain detection
+Comparing a product's current effective price (after any attached discount) against the median of the user's own prior purchases of that item at the same store, to flag whether an advertised sale is a genuine reduction. Uses only the user's own historical data — no other users' data required. Not shrinkflation detection: most Kaufland-printed item names carry no pack-size information, and when a size is embedded in a name and changes, the name string itself changes — so there's no reliable signal in this data source to catch a same-name-smaller-pack case.
+_Avoid_: Price trends, bargain detection, shrinkflation detection
 
 **Total Spend Aggregation**:
 A user's own spend rolled up across every retailer they shop at and have parsed receipts for. Still single-user scope — only the user's own receipts, never another user's.
