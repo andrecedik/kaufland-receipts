@@ -59,3 +59,19 @@ _Avoid_: HA integration, HA sensors (when raw-data-export is implied)
 **Grocy Stock Push**:
 A one-way write of parsed receipt line items into Grocy's stock/inventory via Grocy's API. In MVP scope, Kaufland-only initially — unlike Cross-Retailer Price Comparison, it needs no new parsers or crowd data, just an API call using data already parsed today.
 _Avoid_: Grocy integration, Grocy sync (implies two-way)
+
+**Product Mapping**:
+A locally persisted, one-to-one resolution of a raw Kaufland line-item name string (e.g. "H-MILCH 3,5%") to either a specific Grocy product id or an explicit skip sentinel, resolved once by the user and reused automatically on every future receipt with that identical string. Lives on our side, not in Grocy — unlike Mealie's live ingredient matching, we're just a client of Grocy's API, not the system driving the catalog, so a locally cached mapping (rather than a fresh live match against Grocy's catalog every time) is what makes repeat pushes deterministic even if the Grocy product is later renamed. Skipping is permanent and remembered the same way as a product match, so a never-stocked item (a plastic bag, a one-off bakery item) doesn't re-prompt on every future receipt.
+_Avoid_: Product matching (implies a live re-match rather than a cached one), item mapping
+
+**Grocy Product Defaults**:
+One global set of Grocy field values (default location, default purchase/stock quantity unit) applied automatically to every product created via Product Mapping's "create new" path. No per-item prompting — the tradeoff is a generic default on every auto-created product until the user tidies up an individual product's location/unit in Grocy's own UI afterward.
+_Avoid_: Product template, default product
+
+**Grocy Push Readiness**:
+A receipt's all-or-nothing eligibility for Grocy Stock Push: every one of its line items must have a resolved Product Mapping (matched or skipped) before any of the receipt pushes. Chosen over pushing mapped items individually so a receipt's Grocy status stays a simple boolean rather than a partial/mixed state. Reaching readiness fires the push automatically — no separate manual confirm step.
+_Avoid_: Sync status, push status (too generic — this is specifically the all-line-items gate)
+
+**Grocy Push Attempt**:
+Per-line-item record of whether that item's stock write to Grocy succeeded, is unattempted, or failed — tracked independently of Grocy Push Readiness, which only gates on mapping resolution, not on push outcome. A receipt-level retry (surfaced after any failure) re-attempts only items without a succeeded Push Attempt, so stock already written to Grocy is never double-counted.
+_Avoid_: Push status (ambiguous between per-receipt readiness and this per-item outcome)
