@@ -1,3 +1,4 @@
+import { Copy } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
@@ -82,6 +83,14 @@ function ItemPicker({
         <span>{rawName}</span>
         {open ? (
           <>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={`Use "${rawName}" as the search text`}
+              onClick={() => setQuery(rawName)}
+            >
+              <Copy />
+            </Button>
             <Command className="w-72 rounded border border-border">
               <CommandInput
                 placeholder="Search Grocy products..."

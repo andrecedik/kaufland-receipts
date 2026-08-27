@@ -83,6 +83,21 @@ describe("GrocyPage", () => {
     )
   })
 
+  it("copies the raw item name into the search box", async () => {
+    mockFetch({
+      "GET /api/grocy/pending": [pending()],
+      "GET /api/grocy/search": [],
+    })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
+
+    fireEvent.click(screen.getByRole("button", { name: /map "milch"/i }))
+    fireEvent.click(screen.getByRole("button", { name: /use "milch" as the search text/i }))
+
+    const input = screen.getByPlaceholderText(/search grocy products/i) as HTMLInputElement
+    expect(input.value).toBe("Milch")
+  })
+
   it("resolves an item as skipped", async () => {
     mockFetch({
       "GET /api/grocy/pending": [pending()],
