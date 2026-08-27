@@ -98,6 +98,33 @@ describe("GrocyPage", () => {
     expect(input.value).toBe("Milch")
   })
 
+  it("shows a spinner on the Create button while the request is in flight", async () => {
+    mockFetch({
+      "GET /api/grocy/pending": [pending()],
+      "GET /api/grocy/search": [],
+    })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
+
+    fireEvent.click(screen.getByRole("button", { name: /map "milch"/i }))
+    fireEvent.change(screen.getByPlaceholderText(/search grocy products/i), { target: { value: "Neue Milch" } })
+    const createButton = screen.getByRole("button", { name: /create/i }) as HTMLButtonElement
+    await waitFor(() => expect(createButton.disabled).toBe(false))
+
+    let resolveMappingsRequest: (value: unknown) => void = () => {}
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveMappingsRequest = resolve }),
+    )
+    fireEvent.click(createButton)
+
+    await waitFor(() => expect(createButton.disabled).toBe(true))
+    expect(document.querySelector(".animate-spin")).toBeTruthy()
+
+    resolveMappingsRequest({ ok: true, json: async () => ({ pushed_receipt_ids: ["r1"] }) })
+    await waitFor(() => expect(document.querySelector(".animate-spin")).toBeNull())
+  })
+
   it("resolves an item as skipped", async () => {
     mockFetch({
       "GET /api/grocy/pending": [pending()],

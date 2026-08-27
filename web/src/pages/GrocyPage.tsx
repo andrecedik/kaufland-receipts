@@ -1,4 +1,4 @@
-import { Copy } from "lucide-react"
+import { Copy, LoaderCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +26,7 @@ function ItemPicker({
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<GrocyProduct[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     if (!open || !query) {
@@ -59,11 +60,14 @@ function ItemPicker({
     if (!query) return
     try {
       setError(null)
+      setCreating(true)
       await resolveMapping({ raw_name: rawName, new_product_name: query })
       setOpen(false)
       onResolved()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not resolve the mapping.")
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -115,9 +119,10 @@ function ItemPicker({
               size="sm"
               variant="outline"
               aria-label={`Create "${query}"`}
-              disabled={!query}
+              disabled={!query || creating}
               onClick={createNew}
             >
+              {creating && <LoaderCircle className="animate-spin" />}
               Create
             </Button>
           </>
