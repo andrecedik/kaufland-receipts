@@ -121,6 +121,27 @@ to pick up new receipt data (no rebuild either way). Only build (below) when
 producing a static copy to deploy or hand off — see [`web/README.md`](web/README.md)
 for the build/preview flow and the directory mix-up to avoid there.
 
+## Grocy Stock Push
+
+Set `GROCY_URL` and `GROCY_API_KEY` (a Grocy API key, generated in Grocy's
+own settings) as environment variables before running `kaufland serve` /
+`docker compose up`, then visit the **Grocy** tab in the web UI.
+
+Every receipt line item needs a one-time **Product Mapping** before it can
+be pushed to Grocy's stock: pick a matching Grocy product, type a new name
+to create one, or **skip** it. Skipping is permanent and remembered by the
+item's exact printed name — so lines that never belong in Grocy stock
+(loyalty discounts like "K Card XTRA Rabatt", Pfand/Leergut deposit
+returns, one-off non-food purchases) only ever need skipping once; the
+same line on every future receipt is skipped automatically from then on.
+A receipt only pushes to Grocy once every one of its line items has been
+resolved this way.
+
+Visit **Grocy → Grocy settings** first to pick a default location and
+quantity unit — used for every product created via the "create new" path,
+since Grocy requires both to exist and typing them by hand every time
+would defeat the point of a fast "type a name, press enter" flow.
+
 ## Status
 
 - [x] Shared data model, idempotent store, exporters, monthly rollup (tested)
@@ -136,7 +157,10 @@ for the build/preview flow and the directory mix-up to avoid there.
 - [x] Site: shadcn/React (`web/` → `site/`)
 - [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
 - [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
-- [ ] Home Assistant (MQTT) + Grocy stock sync
+- [x] Grocy Stock Push — one-way write to Grocy's stock, gated on a
+      one-time Product Mapping per line item (web UI only, no CLI)
+- [ ] Home Assistant (MQTT) Notification Hook — separate from Grocy Stock
+      Push (see `CONTEXT.md`); not yet built
 
 ## Dev
 
