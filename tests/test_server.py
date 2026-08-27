@@ -6,7 +6,9 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
-from kaufland_receipts.models import Receipt, Store
+from kaufland_receipts.grocy_client import GrocyLocation, GrocyProduct, GrocyQuantityUnit
+from kaufland_receipts.grocy_store import GrocyProductDefaults, GrocyStore
+from kaufland_receipts.models import LineItem, Receipt, Store
 from kaufland_receipts.server import create_app
 from kaufland_receipts.store import ReceiptStore
 
@@ -149,3 +151,169 @@ def test_static_mount_handles_missing_public_dir(tmp_path):
     res = client.get("/")
 
     assert res.status_code == 404
+
+
+class _FakeGrocyClient:
+    def __init__(self, *, connected=True, fail_product_ids=None):
+        self.connected = connected
+        self.added = []
+        self.created = []
+        self._fail_product_ids = fail_product_ids or set()
+        self._next_id = 200
+
+    def search_products(self, query):
+        return [GrocyProduct(id=1, name="Milch")] if query else []
+
+    def list_locations(self):
+        return [GrocyLocation(id=1, name="Pantry")]
+
+    def list_quantity_units(self):
+        return [GrocyQuantityUnit(id=3, name="Stück")]
+
+    def create_product(self, name, location_id, qu_id_purchase, qu_id_stock):
+        self.created.append(name)
+        self._next_id += 1
+        return self._next_id
+
+    def add_stock(self, product_id, amount, price, purchased_date):
+        if product_id in self._fail_product_ids:
+            raise RuntimeError("Grocy unreachable")
+        self.added.append(product_id)
+
+    def check_connection(self):
+        return self.connected
+
+
+def _grocy_client_app(tmp_path, *, grocy_client=None):
+    store = ReceiptStore(data_dir=tmp_path / "data")
+    grocy_store = GrocyStore(data_dir=tmp_path / "data")
+    app = create_app(store, web_dir=tmp_path / "web", grocy_store=grocy_store, grocy_client=grocy_client)
+    return TestClient(app), store, grocy_store
+
+
+def _receipt_with_one_item(rid="r1", name="Milch") -> Receipt:
+    li = LineItem(name=name, quantity=Decimal(1), unit_price=Decimal("2.00"),
+                  total_price=Decimal("2.00"), tax_class="A")
+    return Receipt(receipt_id=rid, purchased_at=datetime(2026, 8, 27, 10, 0, 0),
+                    store=Store(name="Kaufland"), line_items=[li], total=Decimal("2.00"))
+
+
+def test_grocy_endpoints_503_when_not_configured(tmp_path, monkeypatch):
+    monkeypatch.delenv("GROCY_URL", raising=False)
+    monkeypatch.delenv("GROCY_API_KEY", raising=False)
+    client, store, _gs = _grocy_client_app(tmp_path)
+    store.save(_receipt_with_one_item())
+
+    assert client.get("/api/grocy/search", params={"q": "Milch"}).status_code == 503
+    assert client.post("/api/grocy/mappings", json={"raw_name": "Milch", "grocy_product_id": 1}).status_code == 503
+    assert client.post("/api/grocy/receipts/r1/retry").status_code == 503
+
+
+def test_grocy_pending_lists_receipts_with_unresolved_items(tmp_path):
+    client, store, _gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+    store.save(_receipt_with_one_item("r1", "Milch"))
+
+    res = client.get("/api/grocy/pending")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert len(body) == 1
+    assert body[0]["receipt_id"] == "r1"
+    assert body[0]["unresolved"] == [{"index": 0, "name": "Milch"}]
+    assert body[0]["failed"] == []
+
+
+def test_grocy_pending_omits_a_fully_resolved_receipt(tmp_path):
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+    store.save(_receipt_with_one_item("r1", "Milch"))
+    gs.resolve_mapping("Milch", grocy_product_id=1)
+
+    assert client.get("/api/grocy/pending").json() == []
+
+
+def test_grocy_search_proxies_to_the_client(tmp_path):
+    client, _store, _gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+
+    res = client.get("/api/grocy/search", params={"q": "Milch"})
+
+    assert res.status_code == 200
+    assert res.json() == [{"id": 1, "name": "Milch"}]
+
+
+def test_grocy_resolve_mapping_pushes_the_ready_receipt(tmp_path):
+    fake = _FakeGrocyClient()
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    store.save(_receipt_with_one_item("r1", "Milch"))
+
+    res = client.post("/api/grocy/mappings", json={"raw_name": "Milch", "grocy_product_id": 1})
+
+    assert res.status_code == 200
+    assert res.json() == {"pushed_receipt_ids": ["r1"]}
+    assert gs.get_push_state("r1")[0].status == "pushed"
+
+
+def test_grocy_resolve_mapping_with_a_new_product_name_creates_it(tmp_path):
+    fake = _FakeGrocyClient()
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    gs.set_defaults(GrocyProductDefaults(location_id=1, quantity_unit_id=3))
+    store.save(_receipt_with_one_item("r1", "Neues Produkt"))
+
+    res = client.post("/api/grocy/mappings", json={"raw_name": "Neues Produkt", "new_product_name": "Neues Produkt"})
+
+    assert res.status_code == 200
+    assert fake.created == ["Neues Produkt"]
+    assert res.json()["pushed_receipt_ids"] == ["r1"]
+
+
+def test_grocy_resolve_mapping_skip(tmp_path):
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+    store.save(_receipt_with_one_item("r1", "K Card XTRA Rabatt"))
+
+    res = client.post("/api/grocy/mappings", json={"raw_name": "K Card XTRA Rabatt", "skipped": True})
+
+    assert res.status_code == 200
+    assert res.json() == {"pushed_receipt_ids": ["r1"]}
+    assert gs.all_mappings()["K Card XTRA Rabatt"].skipped is True
+
+
+def test_grocy_retry_only_reattempts_failed_items(tmp_path):
+    fake = _FakeGrocyClient(fail_product_ids={1})
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    store.save(_receipt_with_one_item("r1", "Milch"))
+    client.post("/api/grocy/mappings", json={"raw_name": "Milch", "grocy_product_id": 1})
+    assert gs.get_push_state("r1")[0].status == "failed"
+
+    fake._fail_product_ids = set()  # Grocy reachable again
+    res = client.post("/api/grocy/receipts/r1/retry")
+
+    assert res.status_code == 200
+    assert res.json() == {"all_pushed": True}
+    assert gs.get_push_state("r1")[0].status == "pushed"
+
+
+def test_grocy_retry_404s_for_an_unknown_receipt(tmp_path):
+    client, _store, _gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+
+    assert client.post("/api/grocy/receipts/does-not-exist/retry").status_code == 404
+
+
+def test_grocy_settings_get_reports_connection_and_choices(tmp_path):
+    client, _store, _gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient(connected=True))
+
+    res = client.get("/api/grocy/settings")
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["connected"] is True
+    assert body["defaults"] is None
+    assert body["locations"] == [{"id": 1, "name": "Pantry"}]
+    assert body["quantity_units"] == [{"id": 3, "name": "Stück"}]
+
+
+def test_grocy_settings_put_persists_defaults(tmp_path):
+    client, _store, gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
+
+    res = client.put("/api/grocy/settings", json={"location_id": 1, "quantity_unit_id": 3})
+
+    assert res.status_code == 200
+    assert gs.get_defaults() == GrocyProductDefaults(location_id=1, quantity_unit_id=3)
