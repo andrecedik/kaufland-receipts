@@ -47,3 +47,29 @@ export interface Receipt {
   // from source_file, which is the ingest-time path and can go stale.
   pdf_available: boolean
 }
+
+export interface GrocyProduct {
+  id: number
+  name: string
+}
+
+export interface GrocyPendingItem {
+  index: number
+  name: string
+}
+
+export interface GrocyFailedItem {
+  index: number
+  name: string
+  error: string | null
+}
+
+export interface GrocyPendingReceipt {
+  receipt_id: string
+  purchased_at: string
+  store_name: string
+  total: string
+  currency: string
+  unresolved: GrocyPendingItem[]
+  failed: GrocyFailedItem[]
+}
