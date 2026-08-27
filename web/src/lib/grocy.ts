@@ -23,14 +23,16 @@ export async function resolveMapping(params: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   })
-  if (!res.ok) throw new Error("Could not resolve the mapping.")
-  return res.json()
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.detail ?? "Could not resolve the mapping.")
+  return data
 }
 
 export async function retryReceiptPush(receiptId: string): Promise<{ all_pushed: boolean }> {
   const res = await fetch(`/api/grocy/receipts/${receiptId}/retry`, { method: "POST" })
-  if (!res.ok) throw new Error("Retry failed.")
-  return res.json()
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.detail ?? "Retry failed.")
+  return data
 }
 
 export async function fetchGrocySettings(): Promise<GrocySettings> {

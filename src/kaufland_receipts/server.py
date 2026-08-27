@@ -118,9 +118,12 @@ def create_app(
         _require_grocy()
         receipts = store.all()
         if body.new_product_name:
-            pushed = create_product_and_map_and_push(
-                body.raw_name, body.new_product_name, receipts, grocy_store, grocy_client,
-            )
+            try:
+                pushed = create_product_and_map_and_push(
+                    body.raw_name, body.new_product_name, receipts, grocy_store, grocy_client,
+                )
+            except ValueError as exc:
+                raise HTTPException(409, detail=str(exc)) from exc
         else:
             pushed = resolve_mapping_and_push(
                 body.raw_name, receipts, grocy_store, grocy_client,

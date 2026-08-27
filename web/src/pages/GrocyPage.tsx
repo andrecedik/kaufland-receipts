@@ -24,6 +24,7 @@ function ItemPicker({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<GrocyProduct[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || !query) {
@@ -31,74 +32,103 @@ function ItemPicker({
       return
     }
     let cancelled = false
-    searchGrocyProducts(query).then((r) => {
-      if (!cancelled) setResults(r)
-    })
+    const timeout = setTimeout(() => {
+      searchGrocyProducts(query).then((r) => {
+        if (!cancelled) setResults(r)
+      })
+    }, 300)
     return () => {
       cancelled = true
+      clearTimeout(timeout)
     }
   }, [open, query])
 
   async function pick(product: GrocyProduct) {
-    await resolveMapping({ raw_name: rawName, grocy_product_id: product.id })
-    setOpen(false)
-    onResolved()
+    try {
+      setError(null)
+      await resolveMapping({ raw_name: rawName, grocy_product_id: product.id })
+      setOpen(false)
+      onResolved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resolve the mapping.")
+    }
   }
 
   async function createNew() {
     if (!query) return
-    await resolveMapping({ raw_name: rawName, new_product_name: query })
-    setOpen(false)
-    onResolved()
+    try {
+      setError(null)
+      await resolveMapping({ raw_name: rawName, new_product_name: query })
+      setOpen(false)
+      onResolved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resolve the mapping.")
+    }
   }
 
   async function skip() {
-    await resolveMapping({ raw_name: rawName, skipped: true })
-    onResolved()
+    try {
+      setError(null)
+      await resolveMapping({ raw_name: rawName, skipped: true })
+      onResolved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resolve the mapping.")
+    }
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span>{rawName}</span>
-      {open ? (
-        <Command className="w-72 rounded border border-border">
-          <CommandInput
-            placeholder="Search Grocy products..."
-            value={query}
-            onValueChange={setQuery}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && results.length === 0) createNew()
-            }}
-          />
-          <CommandList>
-            <CommandEmpty>
-              <button type="button" className="w-full px-2 py-1 text-left text-sm" onClick={createNew}>
-                Create "{query}"
-              </button>
-            </CommandEmpty>
-            <CommandGroup>
-              {results.map((p) => (
-                <CommandItem key={p.id} value={p.name} onSelect={() => pick(p)}>
-                  {p.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      ) : (
-        <Button size="sm" variant="secondary" aria-label={`Map "${rawName}"`} onClick={() => setOpen(true)}>
-          Map
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span>{rawName}</span>
+        {open ? (
+          <>
+            <Command className="w-72 rounded border border-border">
+              <CommandInput
+                placeholder="Search Grocy products..."
+                value={query}
+                onValueChange={setQuery}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && results.length === 0) createNew()
+                }}
+              />
+              <CommandList>
+                <CommandEmpty className="px-2 py-1.5 text-sm text-muted-foreground">No matches.</CommandEmpty>
+                <CommandGroup>
+                  {results.map((p) => (
+                    <CommandItem key={p.id} value={p.name} onSelect={() => pick(p)}>
+                      {p.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label={`Create "${query}"`}
+              disabled={!query}
+              onClick={createNew}
+            >
+              Create
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="secondary" aria-label={`Map "${rawName}"`} onClick={() => setOpen(true)}>
+            Map
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" aria-label={`Skip "${rawName}"`} onClick={skip}>
+          Skip
         </Button>
-      )}
-      <Button size="sm" variant="ghost" aria-label={`Skip "${rawName}"`} onClick={skip}>
-        Skip
-      </Button>
+      </div>
+      {error && <span className="text-sm text-destructive">{error}</span>}
     </div>
   )
 }
 
 export function GrocyPage() {
   const [pending, setPending] = useState<GrocyPendingReceipt[]>([])
+  const [retryErrors, setRetryErrors] = useState<Record<string, string>>({})
 
   async function reload() {
     setPending(await fetchPending())
@@ -109,8 +139,16 @@ export function GrocyPage() {
   }, [])
 
   async function retry(receiptId: string) {
-    await retryReceiptPush(receiptId)
-    reload()
+    try {
+      setRetryErrors((prev) => ({ ...prev, [receiptId]: "" }))
+      await retryReceiptPush(receiptId)
+      reload()
+    } catch (err) {
+      setRetryErrors((prev) => ({
+        ...prev,
+        [receiptId]: err instanceof Error ? err.message : "Retry failed.",
+      }))
+    }
   }
 
   return (
@@ -139,6 +177,9 @@ export function GrocyPage() {
                 </Button>
               </div>
             ))}
+            {retryErrors[r.receipt_id] && (
+              <span className="text-sm text-destructive">{retryErrors[r.receipt_id]}</span>
+            )}
           </CardContent>
         </Card>
       ))}

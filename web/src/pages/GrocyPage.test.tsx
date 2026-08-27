@@ -119,4 +119,23 @@ describe("GrocyPage", () => {
       expect(fetch).toHaveBeenCalledWith("/api/grocy/receipts/r1/retry", expect.objectContaining({ method: "POST" })),
     )
   })
+
+  it("shows the server's error message when a retry fails", async () => {
+    mockFetch({
+      "GET /api/grocy/pending": [
+        pending({ unresolved: [], failed: [{ index: 0, name: "Milch", error: "Grocy unreachable" }] }),
+      ],
+    })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText(/grocy unreachable/i)).toBeTruthy())
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ detail: "Receipt is not fully mapped yet." }),
+    })
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }))
+
+    await waitFor(() => expect(screen.getByText("Receipt is not fully mapped yet.")).toBeTruthy())
+  })
 })

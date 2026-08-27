@@ -286,6 +286,18 @@ def test_grocy_resolve_mapping_with_a_new_product_name_creates_it(tmp_path):
     assert res.json()["pushed_receipt_ids"] == ["r1"]
 
 
+def test_grocy_resolve_mapping_with_a_new_product_name_409s_without_defaults(tmp_path):
+    fake = _FakeGrocyClient()
+    client, store, _gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    store.save(_receipt_with_one_item("r1", "Neues Produkt"))
+
+    res = client.post("/api/grocy/mappings", json={"raw_name": "Neues Produkt", "new_product_name": "Neues Produkt"})
+
+    assert res.status_code == 409
+    assert res.json()["detail"] == "Grocy Product Defaults are not configured yet."
+    assert fake.created == []
+
+
 def test_grocy_resolve_mapping_skip(tmp_path):
     client, store, gs = _grocy_client_app(tmp_path, grocy_client=_FakeGrocyClient())
     store.save(_receipt_with_one_item("r1", "K Card XTRA Rabatt"))
