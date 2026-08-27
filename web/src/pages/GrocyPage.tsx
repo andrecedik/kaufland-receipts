@@ -56,12 +56,12 @@ function ItemPicker({
     }
   }
 
-  async function createNew() {
-    if (!query) return
+  async function createProduct(name: string) {
+    if (!name) return
     try {
       setError(null)
       setCreating(true)
-      await resolveMapping({ raw_name: rawName, new_product_name: query })
+      await resolveMapping({ raw_name: rawName, new_product_name: name })
       setOpen(false)
       onResolved()
     } catch (err) {
@@ -101,7 +101,7 @@ function ItemPicker({
                 value={query}
                 onValueChange={setQuery}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && results.length === 0) createNew()
+                  if (e.key === "Enter" && results.length === 0) createProduct(query)
                 }}
               />
               <CommandList>
@@ -120,16 +120,28 @@ function ItemPicker({
               variant="outline"
               aria-label={`Create "${query}"`}
               disabled={!query || creating}
-              onClick={createNew}
+              onClick={() => createProduct(query)}
             >
               {creating && <LoaderCircle className="animate-spin" />}
               Create
             </Button>
           </>
         ) : (
-          <Button size="sm" variant="secondary" aria-label={`Map "${rawName}"`} onClick={() => setOpen(true)}>
-            Map
-          </Button>
+          <>
+            <Button size="sm" variant="secondary" aria-label={`Map "${rawName}"`} onClick={() => setOpen(true)}>
+              Map
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label={`Create "${rawName}"`}
+              disabled={creating}
+              onClick={() => createProduct(rawName)}
+            >
+              {creating && <LoaderCircle className="animate-spin" />}
+              Create
+            </Button>
+          </>
         )}
         <Button size="sm" variant="ghost" aria-label={`Skip "${rawName}"`} onClick={skip}>
           Skip

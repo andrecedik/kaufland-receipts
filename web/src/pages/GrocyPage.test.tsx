@@ -57,6 +57,27 @@ describe("GrocyPage", () => {
     expect(screen.getByText(/Kaufland/)).toBeTruthy()
   })
 
+  it("creates a product directly from the raw item name via the quick-create button", async () => {
+    mockFetch({
+      "GET /api/grocy/pending": [pending()],
+      "POST /api/grocy/mappings": { pushed_receipt_ids: ["r1"] },
+    })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
+
+    fireEvent.click(screen.getByRole("button", { name: /create "milch"/i }))
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/grocy/mappings",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ raw_name: "Milch", new_product_name: "Milch" }),
+        }),
+      ),
+    )
+  })
+
   it("resolves an item by picking a search result", async () => {
     const searchResult: GrocyProduct[] = [{ id: 1, name: "H-Milch" }]
     mockFetch({
