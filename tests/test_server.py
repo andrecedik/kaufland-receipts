@@ -252,6 +252,27 @@ def test_grocy_resolve_mapping_pushes_the_ready_receipt(tmp_path):
     assert gs.get_push_state("r1")[0].status == "pushed"
 
 
+def test_grocy_resolve_mapping_pushes_every_receipt_that_becomes_ready(tmp_path):
+    # Product Mapping is global (keyed by raw name, not receipt) -- one
+    # resolution over the HTTP endpoint can bring multiple pending receipts
+    # to Grocy Push Readiness at once. grocy.py's resolve_mapping_and_push
+    # already covers this at the unit level (see
+    # test_resolve_mapping_and_push_pushes_every_receipt_that_becomes_ready
+    # in tests/test_grocy.py); this proves the real /api/grocy/mappings
+    # route wires it through correctly too.
+    fake = _FakeGrocyClient()
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    store.save(_receipt_with_one_item("r1", "Milch"))
+    store.save(_receipt_with_one_item("r2", "Milch"))
+
+    res = client.post("/api/grocy/mappings", json={"raw_name": "Milch", "grocy_product_id": 1})
+
+    assert res.status_code == 200
+    assert set(res.json()["pushed_receipt_ids"]) == {"r1", "r2"}
+    assert gs.get_push_state("r1")[0].status == "pushed"
+    assert gs.get_push_state("r2")[0].status == "pushed"
+
+
 def test_grocy_resolve_mapping_with_a_new_product_name_creates_it(tmp_path):
     fake = _FakeGrocyClient()
     client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
@@ -289,6 +310,30 @@ def test_grocy_retry_only_reattempts_failed_items(tmp_path):
     assert res.status_code == 200
     assert res.json() == {"all_pushed": True}
     assert gs.get_push_state("r1")[0].status == "pushed"
+
+
+def test_grocy_retry_409s_for_a_receipt_that_is_not_fully_mapped(tmp_path):
+    # grocy_retry must re-check Grocy Push Readiness itself -- the
+    # all-or-nothing design means a receipt should never get a partial push,
+    # even via a direct retry call that bypasses the normal
+    # /api/grocy/mappings flow.
+    fake = _FakeGrocyClient()
+    client, store, gs = _grocy_client_app(tmp_path, grocy_client=fake)
+    li_mapped = LineItem(name="Milch", quantity=Decimal(1), unit_price=Decimal("2.00"),
+                          total_price=Decimal("2.00"), tax_class="A")
+    li_unmapped = LineItem(name="Butter", quantity=Decimal(1), unit_price=Decimal("2.00"),
+                            total_price=Decimal("2.00"), tax_class="A")
+    receipt = Receipt(receipt_id="r1", purchased_at=datetime(2026, 8, 27, 10, 0, 0),
+                       store=Store(name="Kaufland"), line_items=[li_mapped, li_unmapped],
+                       total=Decimal("4.00"))
+    store.save(receipt)
+    gs.resolve_mapping("Milch", grocy_product_id=1)  # "Butter" still unresolved
+
+    res = client.post("/api/grocy/receipts/r1/retry")
+
+    assert res.status_code == 409
+    assert fake.added == []
+    assert gs.get_push_state("r1") == {}
 
 
 def test_grocy_retry_404s_for_an_unknown_receipt(tmp_path):

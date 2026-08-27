@@ -134,6 +134,8 @@ def create_app(
         if not store.has(receipt_id):
             raise HTTPException(404, detail="Receipt not found.")
         receipt = store.load(receipt_id)
+        if not push_readiness(receipt, grocy_store.all_mappings()):
+            raise HTTPException(409, detail="Receipt is not fully mapped yet.")
         all_ok = push_receipt(receipt, grocy_store, grocy_client)
         return {"all_pushed": all_ok}
 
