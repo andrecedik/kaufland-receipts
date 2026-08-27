@@ -5,4 +5,11 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/data   # receipts + uploaded PDFs live here on the host -- change the left side to store them elsewhere
+    environment:
+      # Grocy Stock Push: optional -- leave unset and the app runs fine
+      # without it, /api/grocy/* just returns 503. Set in a git-ignored
+      # .env file next to this compose file (docker compose loads it
+      # automatically); never hardcode the key here.
+      - GROCY_URL=${GROCY_URL:-}
+      - GROCY_API_KEY=${GROCY_API_KEY:-}
     restart: unless-stopped
