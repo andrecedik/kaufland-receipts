@@ -1,4 +1,4 @@
-import type { GrocyPendingReceipt, GrocyProduct } from "@/lib/types"
+import type { GrocyPendingReceipt, GrocyProduct, GrocyProductDefaults, GrocySettings } from "@/lib/types"
 
 export async function fetchPending(): Promise<GrocyPendingReceipt[]> {
   const res = await fetch("/api/grocy/pending")
@@ -31,4 +31,19 @@ export async function retryReceiptPush(receiptId: string): Promise<{ all_pushed:
   const res = await fetch(`/api/grocy/receipts/${receiptId}/retry`, { method: "POST" })
   if (!res.ok) throw new Error("Retry failed.")
   return res.json()
+}
+
+export async function fetchGrocySettings(): Promise<GrocySettings> {
+  const res = await fetch("/api/grocy/settings")
+  if (!res.ok) throw new Error("Could not load Grocy settings.")
+  return res.json()
+}
+
+export async function saveGrocyDefaults(defaults: GrocyProductDefaults): Promise<void> {
+  const res = await fetch("/api/grocy/settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(defaults),
+  })
+  if (!res.ok) throw new Error("Could not save Grocy settings.")
 }

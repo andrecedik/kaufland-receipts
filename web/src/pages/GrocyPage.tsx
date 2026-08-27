@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -114,6 +115,9 @@ export function GrocyPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <Link to="/grocy/settings" className="self-end text-sm text-muted-foreground hover:text-foreground">
+        Grocy settings
+      </Link>
       {pending.length === 0 && <p className="text-sm text-muted-foreground">Nothing pending.</p>}
       {pending.map((r) => (
         <Card key={r.receipt_id}>

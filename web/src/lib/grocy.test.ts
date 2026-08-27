@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { fetchPending, resolveMapping, retryReceiptPush, searchGrocyProducts } from "@/lib/grocy"
+import { fetchPending, fetchGrocySettings, resolveMapping, retryReceiptPush, saveGrocyDefaults, searchGrocyProducts } from "@/lib/grocy"
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn())
@@ -39,5 +39,28 @@ describe("grocy.ts fetch helpers", () => {
     ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: async () => ({ all_pushed: true }) })
     await retryReceiptPush("r1")
     expect(fetch).toHaveBeenCalledWith("/api/grocy/receipts/r1/retry", expect.objectContaining({ method: "POST" }))
+  })
+})
+
+describe("grocy.ts settings helpers", () => {
+  it("fetchGrocySettings calls GET /api/grocy/settings", async () => {
+    ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ connected: true, defaults: null, locations: [], quantity_units: [] }),
+    })
+    await fetchGrocySettings()
+    expect(fetch).toHaveBeenCalledWith("/api/grocy/settings")
+  })
+
+  it("saveGrocyDefaults PUTs the chosen defaults", async () => {
+    ;(fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: async () => ({ status: "ok" }) })
+    await saveGrocyDefaults({ location_id: 1, quantity_unit_id: 3 })
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/grocy/settings",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ location_id: 1, quantity_unit_id: 3 }),
+      }),
+    )
   })
 })

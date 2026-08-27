@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import { MemoryRouter } from "react-router-dom"
 import { GrocyPage } from "./GrocyPage"
 import type { GrocyPendingReceipt, GrocyProduct } from "@/lib/types"
 
@@ -50,7 +51,7 @@ beforeEach(() => {
 describe("GrocyPage", () => {
   it("lists an unresolved item for a pending receipt", async () => {
     mockFetch({ "GET /api/grocy/pending": [pending()] })
-    render(<GrocyPage />)
+    render(<GrocyPage />, { wrapper: MemoryRouter })
 
     await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
     expect(screen.getByText(/Kaufland/)).toBeTruthy()
@@ -63,7 +64,7 @@ describe("GrocyPage", () => {
       "GET /api/grocy/search": searchResult,
       "POST /api/grocy/mappings": { pushed_receipt_ids: ["r1"] },
     })
-    render(<GrocyPage />)
+    render(<GrocyPage />, { wrapper: MemoryRouter })
     await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
 
     fireEvent.click(screen.getByRole("button", { name: /map "milch"/i }))
@@ -87,7 +88,7 @@ describe("GrocyPage", () => {
       "GET /api/grocy/pending": [pending()],
       "POST /api/grocy/mappings": { pushed_receipt_ids: ["r1"] },
     })
-    render(<GrocyPage />)
+    render(<GrocyPage />, { wrapper: MemoryRouter })
     await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
 
     fireEvent.click(screen.getByRole("button", { name: /skip "milch"/i }))
@@ -109,7 +110,7 @@ describe("GrocyPage", () => {
       ],
       "POST /api/grocy/receipts/r1/retry": { all_pushed: true },
     })
-    render(<GrocyPage />)
+    render(<GrocyPage />, { wrapper: MemoryRouter })
 
     await waitFor(() => expect(screen.getByText(/grocy unreachable/i)).toBeTruthy())
     fireEvent.click(screen.getByRole("button", { name: /retry/i }))

@@ -73,3 +73,25 @@ export interface GrocyPendingReceipt {
   unresolved: GrocyPendingItem[]
   failed: GrocyFailedItem[]
 }
+
+export interface GrocyLocation {
+  id: number
+  name: string
+}
+
+export interface GrocyQuantityUnit {
+  id: number
+  name: string
+}
+
+export interface GrocyProductDefaults {
+  location_id: number
+  quantity_unit_id: number
+}
+
+export interface GrocySettings {
+  connected: boolean
+  defaults: GrocyProductDefaults | null
+  locations: GrocyLocation[]
+  quantity_units: GrocyQuantityUnit[]
+}
