@@ -1,4 +1,4 @@
-import { Copy, LoaderCircle } from "lucide-react"
+import { Copy, LoaderCircle, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
@@ -179,9 +179,15 @@ export function GrocyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/grocy/settings" className="self-end text-sm text-muted-foreground hover:text-foreground">
-        Grocy settings
-      </Link>
+      <div className="flex items-center justify-between">
+        <Button size="sm" variant="outline" onClick={reload}>
+          <RefreshCw />
+          Refresh
+        </Button>
+        <Link to="/grocy/settings" className="text-sm text-muted-foreground hover:text-foreground">
+          Grocy settings
+        </Link>
+      </div>
       {pending.length === 0 && <p className="text-sm text-muted-foreground">Nothing pending.</p>}
       {pending.map((r) => (
         <Card key={r.receipt_id}>

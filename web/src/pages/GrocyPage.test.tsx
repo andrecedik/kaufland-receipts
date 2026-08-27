@@ -57,6 +57,20 @@ describe("GrocyPage", () => {
     expect(screen.getByText(/Kaufland/)).toBeTruthy()
   })
 
+  it("re-fetches pending items when Refresh is clicked", async () => {
+    mockFetch({ "GET /api/grocy/pending": [pending()] })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => [] })
+    fireEvent.click(screen.getByRole("button", { name: /refresh/i }))
+
+    await waitFor(() => expect(screen.getByText(/nothing pending/i)).toBeTruthy())
+    expect(fetch).toHaveBeenCalledWith("/api/grocy/pending")
+  })
+
   it("creates a product directly from the raw item name via the quick-create button", async () => {
     mockFetch({
       "GET /api/grocy/pending": [pending()],
