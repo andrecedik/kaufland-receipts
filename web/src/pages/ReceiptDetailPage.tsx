@@ -2,6 +2,7 @@ import { Info, TriangleAlert } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import {
   Drawer,
   DrawerClose,
@@ -14,7 +15,19 @@ import {
 } from "@/components/ui/drawer"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
-import { fmtMoney, formatVerdict, itemSlug, lineItemSum, mergeDuplicateLines, num, receipts, totalSaved, totalsMatch } from "@/lib/receipts"
+import {
+  fmtMoney,
+  formatVerdict,
+  itemSlug,
+  lineItemSum,
+  mergeDuplicateLines,
+  num,
+  receipts,
+  totalSaved,
+  totalsMatch,
+  verdictDotClass,
+} from "@/lib/receipts"
+import { cn } from "@/lib/utils"
 
 export function ReceiptDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -97,11 +110,12 @@ export function ReceiptDetailPage() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-[10px]">
+      <Card className="py-0">
         <Table>
           <TableHeader className="bg-thead [&_tr]:border-b-0">
             <TableRow className="hover:bg-thead">
               <TableHead className="text-thead-foreground">Item</TableHead>
+              <TableHead className="text-thead-foreground">Bargain</TableHead>
               <TableHead className="text-right text-thead-foreground">Qty</TableHead>
               <TableHead className="text-right text-thead-foreground">Unit</TableHead>
               <TableHead className="text-right text-thead-foreground">Total</TableHead>
@@ -120,8 +134,11 @@ export function ReceiptDetailPage() {
                       {Number(li.size_value)} {li.size_unit}
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell>
                   {li.price_verdict && (
-                    <Badge variant={li.price_verdict.label === "genuine" ? "default" : "secondary"} className="ml-2">
+                    <Badge variant="outline">
+                      <span aria-hidden="true" className={cn("size-1.5 rounded-full", verdictDotClass(li.price_verdict.label))} />
                       {formatVerdict(li.price_verdict)}
                     </Badge>
                   )}
@@ -132,21 +149,23 @@ export function ReceiptDetailPage() {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{num(li.total_price).toFixed(2)} EUR</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{li.tax_class ?? "?"}</Badge>
+                  <Badge variant="outline" className="font-mono">
+                    {li.tax_class ?? "–"}
+                  </Badge>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={3} className="font-bold">
+              <TableCell colSpan={4} className="font-bold">
                 Total saved
               </TableCell>
               <TableCell className="text-right font-bold tabular-nums">{fmtMoney(saved, receipt.currency)}</TableCell>
               <TableCell />
             </TableRow>
             <TableRow>
-              <TableCell colSpan={3} className="font-bold">
+              <TableCell colSpan={4} className="font-bold">
                 Total
               </TableCell>
               <TableCell className="text-right font-bold tabular-nums">{fmtMoney(num(receipt.total), receipt.currency)}</TableCell>
@@ -154,7 +173,7 @@ export function ReceiptDetailPage() {
             </TableRow>
           </TableFooter>
         </Table>
-      </div>
+      </Card>
     </>
   )
 }

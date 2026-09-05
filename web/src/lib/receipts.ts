@@ -41,9 +41,18 @@ export function fmtMoney(value: number, currency = "EUR"): string {
 
 export function formatVerdict(v: PriceVerdict): string {
   const pct = Math.round(Math.abs(num(v.percent_delta)))
-  if (v.label === "genuine") return `${pct}% below your usual price`
-  if (v.label === "worse_than_usual") return `${pct}% above your usual price`
-  return `Only ${pct}% off — not much of a bargain`
+  if (v.label === "genuine") return `${pct}% below usual price`
+  if (v.label === "worse_than_usual") return `${pct}% above usual price`
+  return `Only ${pct}% off`
+}
+
+// Dot color for a price-verdict badge -- reuses the app's own semantic
+// tokens (the same green as the "matches printed total" check) rather than
+// inventing new ones, except "marginal" which has no existing token yet.
+export function verdictDotClass(label: string): string {
+  if (label === "genuine") return "bg-match"
+  if (label === "worse_than_usual") return "bg-destructive"
+  return "bg-amber-500"
 }
 
 export function slugify(text: string): string {

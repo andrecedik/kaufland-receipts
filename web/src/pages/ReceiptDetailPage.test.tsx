@@ -121,14 +121,14 @@ describe("ReceiptDetailPage price verdicts", () => {
     )
     renderDetail("kaufland-test-1")
 
-    expect(screen.getByText("15% below your usual price")).toBeTruthy()
+    expect(screen.getByText("15% below usual price")).toBeTruthy()
   })
 
   it("shows nothing extra for a line item with no verdict", () => {
     receipts.push(receipt({ line_items: [lineItem({ name: "Brot", total_price: "1.50" })], total: "1.50" }))
     renderDetail("kaufland-test-1")
 
-    expect(screen.queryByText(/your usual price/)).toBeNull()
-    expect(screen.queryByText(/not much of a bargain/)).toBeNull()
+    expect(screen.queryByText(/usual price/)).toBeNull()
+    expect(screen.queryByText(/% off/)).toBeNull()
   })
 })
