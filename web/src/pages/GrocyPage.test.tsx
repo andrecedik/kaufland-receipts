@@ -160,6 +160,20 @@ describe("GrocyPage", () => {
     await waitFor(() => expect(document.querySelector(".animate-spin")).toBeNull())
   })
 
+  it("shows an error message when the search request fails", async () => {
+    mockFetch({ "GET /api/grocy/pending": [pending()] })
+    render(<GrocyPage />, { wrapper: MemoryRouter })
+    await waitFor(() => expect(screen.getByText("Milch")).toBeTruthy())
+
+    fireEvent.click(screen.getByRole("button", { name: /map "milch"/i }))
+
+    const fetchMock = fetch as ReturnType<typeof vi.fn>
+    fetchMock.mockResolvedValueOnce({ ok: false, json: async () => null })
+    fireEvent.change(screen.getByPlaceholderText(/search grocy products/i), { target: { value: "Milch" } })
+
+    await waitFor(() => expect(screen.getByText("Could not search Grocy products.")).toBeTruthy())
+  })
+
   it("resolves an item as skipped", async () => {
     mockFetch({
       "GET /api/grocy/pending": [pending()],

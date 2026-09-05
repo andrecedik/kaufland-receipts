@@ -35,9 +35,17 @@ function ItemPicker({
     }
     let cancelled = false
     const timeout = setTimeout(() => {
-      searchGrocyProducts(query).then((r) => {
-        if (!cancelled) setResults(r)
-      })
+      searchGrocyProducts(query)
+        .then((r) => {
+          if (cancelled) return
+          setResults(r)
+          setError(null)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          setResults([])
+          setError(err instanceof Error ? err.message : "Could not search Grocy products.")
+        })
     }, 300)
     return () => {
       cancelled = true
@@ -105,7 +113,9 @@ function ItemPicker({
                 }}
               />
               <CommandList>
-                <CommandEmpty className="px-2 py-1.5 text-sm text-muted-foreground">No matches.</CommandEmpty>
+                <CommandEmpty className="px-2 py-1.5 text-sm text-muted-foreground">
+                  {error ? "Search failed." : "No matches."}
+                </CommandEmpty>
                 <CommandGroup>
                   {results.map((p) => (
                     <CommandItem key={p.id} value={p.name} onSelect={() => pick(p)}>
