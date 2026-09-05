@@ -16,16 +16,17 @@ import {
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDateTime } from "@/lib/format"
 import {
+  effectiveUnitPrice,
   fmtMoney,
   formatVerdict,
   itemSlug,
   lineItemSum,
-  mergeDuplicateLines,
   num,
   receipts,
   totalSaved,
   totalsMatch,
   verdictDotClass,
+  withAttachedDiscounts,
 } from "@/lib/receipts"
 import { cn } from "@/lib/utils"
 
@@ -44,7 +45,7 @@ export function ReceiptDetailPage() {
     )
   }
 
-  const merged = mergeDuplicateLines(receipt.line_items)
+  const merged = withAttachedDiscounts(receipt.line_items)
   const saved = totalSaved(receipt)
   const matches = totalsMatch(receipt)
   const address = [receipt.store.street, `${receipt.store.postal_code ?? ""} ${receipt.store.city ?? ""}`.trim()]
@@ -145,9 +146,27 @@ export function ReceiptDetailPage() {
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{li.quantity}</TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {li.unit_price !== null ? `${num(li.unit_price).toFixed(2)} EUR` : "–"}
+                  {li.unit_price === null ? (
+                    "–"
+                  ) : li.discountTotal !== 0 ? (
+                    <>
+                      <span className="mr-1 text-destructive line-through">{num(li.unit_price).toFixed(2)}</span>
+                      <span className="text-match">{effectiveUnitPrice(li, li.discountTotal).toFixed(2)} EUR</span>
+                    </>
+                  ) : (
+                    `${num(li.unit_price).toFixed(2)} EUR`
+                  )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{num(li.total_price).toFixed(2)} EUR</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {li.discountTotal !== 0 ? (
+                    <>
+                      <span className="mr-1 text-destructive line-through">{num(li.total_price).toFixed(2)}</span>
+                      <span className="text-match">{(num(li.total_price) + li.discountTotal).toFixed(2)} EUR</span>
+                    </>
+                  ) : (
+                    `${num(li.total_price).toFixed(2)} EUR`
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-mono">
                     {li.tax_class ?? "–"}

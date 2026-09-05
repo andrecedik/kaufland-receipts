@@ -96,6 +96,71 @@ export function mergeDuplicateLines(lineItems: LineItem[]): LineItem[] {
   return merged
 }
 
+export interface DisplayLineItem extends LineItem {
+  /** Sum of any attached discount lines' total_price (negative, 0 if none). */
+  discountTotal: number
+}
+
+/**
+ * Folds each discount line (K Card XTRA Rabatt, Mengenrabatt, Artikelrabatt,
+ * ...) into the product line immediately before it, then merges same-name/
+ * unit-price duplicates the same way `mergeDuplicateLines` does. Mirrors
+ * `attach_item_discounts` in price_integrity.py -- discount lines are
+ * recognized by having no tax_class, unlike every product/refund line, and
+ * are dropped from the result once folded in. Keep in sync with the Python
+ * original if the recognition rule ever changes.
+ *
+ * Used by the receipt detail page only -- `mergeDuplicateLines` (used
+ * elsewhere, e.g. price history) intentionally still surfaces discount
+ * lines as their own rows, since it has no notion of "attached to".
+ */
+export function withAttachedDiscounts(lineItems: LineItem[]): DisplayLineItem[] {
+  const merged: DisplayLineItem[] = []
+  const index = new Map<string, number>()
+  let i = 0
+  while (i < lineItems.length) {
+    const item = lineItems[i]
+    if (item.tax_class === null) {
+      i++ // orphan discount line, nothing to attach to
+      continue
+    }
+    i++
+    let discountTotal = 0
+    while (i < lineItems.length && lineItems[i].tax_class === null) {
+      discountTotal += num(lineItems[i].total_price)
+      i++
+    }
+
+    if (item.unit_price === null) {
+      merged.push({ ...item, discountTotal })
+      continue
+    }
+    const key = `${item.name}\0${item.unit_price}`
+    const existingIdx = index.get(key)
+    if (existingIdx !== undefined) {
+      const existing = merged[existingIdx]
+      const newQty = num(existing.quantity) + num(item.quantity)
+      merged[existingIdx] = {
+        ...existing,
+        quantity: String(newQty),
+        total_price: String(num(existing.unit_price) * newQty),
+        article_number: existing.article_number ?? item.article_number,
+        discountTotal: existing.discountTotal + discountTotal,
+      }
+    } else {
+      index.set(key, merged.length)
+      merged.push({ ...item, discountTotal })
+    }
+  }
+  return merged
+}
+
+/** Effective price per unit once the attached discount is folded in.
+ * Mirrors `_effective_unit_price` in price_integrity.py. */
+export function effectiveUnitPrice(item: LineItem, discountTotal: number): number {
+  return (num(item.total_price) + discountTotal) / num(item.quantity)
+}
+
 /**
  * Sum of discount lines (K Card XTRA Rabatt, Mengenrabatt, Artikelrabatt,
  * ...): negative line items with no tax class. Pfand/Leergut refunds are
