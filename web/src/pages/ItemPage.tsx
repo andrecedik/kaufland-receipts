@@ -3,7 +3,7 @@ import { Sparkline } from "@/components/Sparkline"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtDate, isoDate } from "@/lib/format"
-import { itemNameForSlug, itemPriceHistory, num } from "@/lib/receipts"
+import { effectiveUnitPrice, itemNameForSlug, itemPriceHistory, num } from "@/lib/receipts"
 
 export function ItemPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -26,7 +26,7 @@ export function ItemPage() {
   // are formatted separately below.
   const points = observations.map((o) => ({
     date: isoDate(o.receipt.purchased_at),
-    price: num(o.lineItem.unit_price),
+    price: effectiveUnitPrice(o.lineItem, o.lineItem.discountTotal),
   }))
   const first = points[0]
   const last = points[points.length - 1]
@@ -71,7 +71,18 @@ export function ItemPage() {
                     {o.receipt.receipt_id}
                   </Link>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{num(o.lineItem.unit_price).toFixed(2)} EUR</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {o.lineItem.discountTotal !== 0 ? (
+                    <>
+                      <span className="mr-1 text-destructive line-through">{num(o.lineItem.unit_price).toFixed(2)}</span>
+                      <span className="text-match">
+                        {effectiveUnitPrice(o.lineItem, o.lineItem.discountTotal).toFixed(2)} EUR
+                      </span>
+                    </>
+                  ) : (
+                    `${num(o.lineItem.unit_price).toFixed(2)} EUR`
+                  )}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">{o.lineItem.quantity}</TableCell>
               </TableRow>
             ))}

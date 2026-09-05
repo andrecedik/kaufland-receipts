@@ -226,13 +226,20 @@ export function filterAndSortReceipts(
 
 export interface ItemObservation {
   receipt: Receipt
-  lineItem: LineItem
+  lineItem: DisplayLineItem
 }
 
+/**
+ * Uses `withAttachedDiscounts` rather than `mergeDuplicateLines` so a
+ * discounted purchase's price history reflects what was actually paid, not
+ * the pre-discount `unit_price` -- a receipt paying 1.99 after a K Card
+ * Rabatt off a 2.49 sticker price should show up as 1.99 here, the same
+ * price the receipt detail page already displays for it.
+ */
 export function itemPriceHistory(): Map<string, ItemObservation[]> {
   const byName = new Map<string, ItemObservation[]>()
   for (const r of receipts) {
-    for (const li of mergeDuplicateLines(r.line_items)) {
+    for (const li of withAttachedDiscounts(r.line_items)) {
       if (li.unit_price === null || num(li.total_price) < 0) continue
       const list = byName.get(li.name) ?? []
       list.push({ receipt: r, lineItem: li })
