@@ -20,6 +20,7 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+    --color-warning: var(--warning);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
@@ -53,81 +54,87 @@
 }
 
 :root {
-    /* Warm coral + berry-plum palette, shared with the plain-HTML site/. */
-    --background: oklch(0.9829 0.011 63.36);
-    --foreground: oklch(0.2653 0.0217 353.73);
-    --card: oklch(0.9829 0.011 63.36);
-    --card-foreground: oklch(0.2653 0.0217 353.73);
-    --popover: oklch(0.9829 0.011 63.36);
-    --popover-foreground: oklch(0.2653 0.0217 353.73);
-    --primary: oklch(0.5545 0.1743 36.43);
-    --primary-foreground: oklch(0.9706 0.0195 65.15);
-    --secondary: oklch(0.958 0.0219 58.78);
-    --secondary-foreground: oklch(0.2653 0.0217 353.73);
-    --muted: oklch(0.958 0.0219 58.78);
-    --muted-foreground: oklch(0.5391 0.036 1.1);
-    --accent: oklch(0.94 0.026 50.6);
-    --accent-foreground: oklch(0.2653 0.0217 353.73);
-    --destructive: oklch(0.547 0.1788 14.03);
-    --border: oklch(0.9152 0.0293 50.6);
-    --input: oklch(0.9152 0.0293 50.6);
-    --ring: oklch(0.5545 0.1743 36.43);
-    --thead-bg: oklch(0.4141 0.1065 10.94);
-    --thead-fg: oklch(0.9706 0.0195 65.15);
-    --match: oklch(0.5248 0.1163 143.41);
-    --row-hover: oklch(0.94 0.026 50.6);
-    --chart-1: oklch(0.5545 0.1743 36.43);
-    --chart-2: oklch(0.4141 0.1065 10.94);
-    --chart-3: oklch(0.5248 0.1163 143.41);
-    --chart-4: oklch(0.547 0.1788 14.03);
-    --chart-5: oklch(0.5391 0.036 1.1);
+    /* Monokai Pro (Classic filter), adapted for light mode: same accent
+       hues as the dark palette below, darkened for contrast against a
+       warm off-white background. Table header keeps the dark accent band
+       from the old palette's identity, recolored to Monokai's near-black. */
+    --background: #f7f7f5;
+    --foreground: #2d2a2e;
+    --card: #f7f7f5;
+    --card-foreground: #2d2a2e;
+    --popover: #f7f7f5;
+    --popover-foreground: #2d2a2e;
+    --primary: #c15a2e;
+    --primary-foreground: #f7f7f5;
+    --secondary: #edebe7;
+    --secondary-foreground: #2d2a2e;
+    --muted: #edebe7;
+    --muted-foreground: #6e6b66;
+    --accent: #edebe7;
+    --accent-foreground: #2d2a2e;
+    --destructive: #c43d64;
+    --border: #e3e1dc;
+    --input: #e3e1dc;
+    --ring: #c15a2e;
+    --thead-bg: #221f22;
+    --thead-fg: #fcfcfa;
+    --match: #6b8f3d;
+    --warning: #a6790e;
+    --row-hover: #edebe7;
+    --chart-1: #c15a2e;
+    --chart-2: #221f22;
+    --chart-3: #6b8f3d;
+    --chart-4: #c43d64;
+    --chart-5: #6e6b66;
     --radius: 0.625rem;
-    --sidebar: oklch(0.9829 0.011 63.36);
-    --sidebar-foreground: oklch(0.2653 0.0217 353.73);
-    --sidebar-primary: oklch(0.5545 0.1743 36.43);
-    --sidebar-primary-foreground: oklch(0.9706 0.0195 65.15);
-    --sidebar-accent: oklch(0.958 0.0219 58.78);
-    --sidebar-accent-foreground: oklch(0.2653 0.0217 353.73);
-    --sidebar-border: oklch(0.9152 0.0293 50.6);
-    --sidebar-ring: oklch(0.5545 0.1743 36.43);
+    --sidebar: #f7f7f5;
+    --sidebar-foreground: #2d2a2e;
+    --sidebar-primary: #c15a2e;
+    --sidebar-primary-foreground: #f7f7f5;
+    --sidebar-accent: #edebe7;
+    --sidebar-accent-foreground: #2d2a2e;
+    --sidebar-border: #e3e1dc;
+    --sidebar-ring: #c15a2e;
 }
 
 .dark {
-    --background: oklch(0.2334 0.0214 333.3);
-    --foreground: oklch(0.9552 0.0179 48.53);
-    --card: oklch(0.2334 0.0214 333.3);
-    --card-foreground: oklch(0.9552 0.0179 48.53);
-    --popover: oklch(0.2334 0.0214 333.3);
-    --popover-foreground: oklch(0.9552 0.0179 48.53);
-    --primary: oklch(0.7278 0.1723 38.05);
-    --primary-foreground: oklch(0.2334 0.0214 333.3);
-    --secondary: oklch(0.2642 0.0265 340.3);
-    --secondary-foreground: oklch(0.9552 0.0179 48.53);
-    --muted: oklch(0.2642 0.0265 340.3);
-    --muted-foreground: oklch(0.7435 0.0473 4.53);
-    --accent: oklch(0.3 0.03 340.3);
-    --accent-foreground: oklch(0.9552 0.0179 48.53);
-    --destructive: oklch(0.7221 0.1775 10.76);
-    --border: oklch(0.3395 0.0449 352.44);
-    --input: oklch(0.3395 0.0449 352.44);
-    --ring: oklch(0.7278 0.1723 38.05);
-    --thead-bg: oklch(0.464 0.1123 10.49);
-    --thead-fg: oklch(0.9706 0.0195 65.15);
-    --match: oklch(0.7866 0.145 143.08);
-    --row-hover: oklch(0.3 0.03 340.3);
-    --chart-1: oklch(0.7278 0.1723 38.05);
-    --chart-2: oklch(0.464 0.1123 10.49);
-    --chart-3: oklch(0.7866 0.145 143.08);
-    --chart-4: oklch(0.7221 0.1775 10.76);
-    --chart-5: oklch(0.7435 0.0473 4.53);
-    --sidebar: oklch(0.2334 0.0214 333.3);
-    --sidebar-foreground: oklch(0.9552 0.0179 48.53);
-    --sidebar-primary: oklch(0.7278 0.1723 38.05);
-    --sidebar-primary-foreground: oklch(0.2334 0.0214 333.3);
-    --sidebar-accent: oklch(0.2642 0.0265 340.3);
-    --sidebar-accent-foreground: oklch(0.9552 0.0179 48.53);
-    --sidebar-border: oklch(0.3395 0.0449 352.44);
-    --sidebar-ring: oklch(0.7278 0.1723 38.05);
+    /* Monokai Pro, Classic filter -- native palette. */
+    --background: #2d2a2e;
+    --foreground: #fcfcfa;
+    --card: #2d2a2e;
+    --card-foreground: #fcfcfa;
+    --popover: #2d2a2e;
+    --popover-foreground: #fcfcfa;
+    --primary: #fc9867;
+    --primary-foreground: #2d2a2e;
+    --secondary: #403e41;
+    --secondary-foreground: #fcfcfa;
+    --muted: #403e41;
+    --muted-foreground: #939293;
+    --accent: #403e41;
+    --accent-foreground: #fcfcfa;
+    --destructive: #ff6188;
+    --border: #403e41;
+    --input: #403e41;
+    --ring: #fc9867;
+    --thead-bg: #221f22;
+    --thead-fg: #fcfcfa;
+    --match: #a9dc76;
+    --warning: #ffd866;
+    --row-hover: #403e41;
+    --chart-1: #fc9867;
+    --chart-2: #221f22;
+    --chart-3: #a9dc76;
+    --chart-4: #ff6188;
+    --chart-5: #939293;
+    --sidebar: #2d2a2e;
+    --sidebar-foreground: #fcfcfa;
+    --sidebar-primary: #fc9867;
+    --sidebar-primary-foreground: #2d2a2e;
+    --sidebar-accent: #403e41;
+    --sidebar-accent-foreground: #fcfcfa;
+    --sidebar-border: #403e41;
+    --sidebar-ring: #fc9867;
 }
 
 @layer base {

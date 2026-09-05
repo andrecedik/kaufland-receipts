@@ -48,11 +48,11 @@ export function formatVerdict(v: PriceVerdict): string {
 
 // Dot color for a price-verdict badge -- reuses the app's own semantic
 // tokens (the same green as the "matches printed total" check) rather than
-// inventing new ones, except "marginal" which has no existing token yet.
+// hardcoded Tailwind colors, so it follows the active theme (e.g. Monokai).
 export function verdictDotClass(label: string): string {
   if (label === "genuine") return "bg-match"
   if (label === "worse_than_usual") return "bg-destructive"
-  return "bg-amber-500"
+  return "bg-warning"
 }
 
 export function slugify(text: string): string {
