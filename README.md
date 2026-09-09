@@ -1,170 +1,225 @@
 # kaufland-receipts
 
-Pull **your own** Kaufland digital receipts (Digitale Kassenbons) out of the app
-and into local, structured data — for spending analysis, price-history tracking,
-[me-brain](../), and Home Assistant / Grocy.
+Turn your Kaufland digital receipts (Digitale Kassenbons) into structured,
+self-hosted data — and find out whether that "sale" sticker is actually a
+better price than what you already paid.
 
 > Unofficial and unaffiliated with Kaufland. This is a personal-data /
-> interoperability tool: it only ever handles your own receipts, and the active
-> path parses PDFs *you* export from the app — it does not talk to Kaufland's
-> servers at all.
+> interoperability tool: it only ever handles your own receipts, and the
+> active ingestion path parses PDFs *you* export from the app — it never
+> talks to Kaufland's servers.
 
-## Why it works this way
+## What it does
 
-Kaufland shows digital receipts only inside the app; there is no website and no
-public API. Interception of the app (2026-08-21) showed the receipts host
-`app.kaufland.net` is **certificate-pinned**, so the automated route is on hold.
-The auth side, however, is clean cidaas OAuth2 with `offline_access` — a fully
-automated client is feasible once the pinned endpoints are recovered on an
-Android emulator. See [`docs/api.md`](docs/api.md).
+- **Item Price History** — press <kbd>⌘K</kbd>, type any item name, and see
+  every price you've paid for it across every receipt: a sparkline plus a
+  date-ordered table. Yesterday's "amazed, I didn't know I could do that"
+  reaction to your own price history is the whole point.
+- **Price Integrity Check** — compares a discounted item's price against the
+  median of what *you* actually paid for it before, at the same store, and
+  tells you whether the "sale" is real.
+- **Total Spend Aggregation** — a running total of what you actually spend,
+  rolled up across every store you've fed receipts from.
+- **Grocy Stock Push** — one click pushes a receipt's line items into your
+  [Grocy](https://grocy.info/) stock, so scanning receipts becomes how your
+  pantry inventory stays current.
+- Runs entirely on hardware you control. Nothing is uploaded anywhere.
 
-Until then, the **PDF pipeline** below is the route in use. It is guaranteed,
-fully offline, and shares its data model with the future API client, so nothing
-downstream changes when automation lands.
+## Why self-hosted
 
-## PDF pipeline
+There's no hosted version, and there isn't going to be one anytime soon —
+that's deliberate, not a missing feature. Grocery receipts are sensitive-ish
+personal data (what you buy, when, how much you spend), and the only way to
+avoid becoming a data processor for other people's spending habits is to
+never hold their data at all. You run it, your receipts stay on your
+infrastructure, full stop.
+
+## Quick Start
+
+For a NAS or any Docker host:
+
+```sh
+git clone https://github.com/andrecedik/kaufland-receipts.git
+cd kaufland-receipts
+docker compose up -d
+```
+
+This pulls the published multi-arch image (`linux/amd64` / `linux/arm64`)
+from GHCR — no build step, no cloning half a toolchain. Open
+`http://<host>:8000`, upload a receipt PDF, done.
+
+⚠️ There's no authentication in front of the upload endpoint yet — keep it on
+a trusted network, or put a reverse proxy with auth in front of it before
+exposing it beyond `127.0.0.1`.
+
+See [Self-hosting details](#self-hosting-details) below for volumes, Grocy
+env vars, and building locally instead of pulling.
+
+## Features
+
+### Item Price History
+
+Every item you've ever bought gets its own page: a sparkline of price over
+time and a table of every observation (date, store, price). Reached via the
+global <kbd>⌘K</kbd> quick-jump, which searches receipts, items, and pages
+at once.
+
+### Price Integrity Check
+
+Kaufland (like most grocers) prints a "sale" price without telling you what
+you paid last time. This compares an item's current effective price (after
+any discount) against the median of your own prior purchases of that item at
+that store — using only your own history, no external price database — and
+tells you whether it's a genuine reduction or a sale in name only.
+
+### Total Spend Aggregation
+
+Every parsed receipt rolls up into a running spend total across every store
+you've fed receipts from. Currently Kaufland-only (see
+[What it can't do yet](#what-it-cant-do-yet)), but the data model and UI
+don't assume a single retailer.
+
+### Grocy Stock Push
+
+Set `GROCY_URL` and `GROCY_API_KEY`, then push a receipt straight into your
+Grocy stock from the **Grocy** tab. The first time a line item shows up, you
+resolve it once — match it to an existing Grocy product, create a new one,
+or mark it as permanently skipped (for things that never belong in stock,
+like loyalty discounts or Pfand/Leergut deposit returns). Every future
+receipt with that exact item name resolves itself automatically after that.
+A receipt pushes to Grocy only once every one of its line items has been
+resolved.
+
+## What it can't do yet
+
+- **Kaufland only, German only.** The parser handles Kaufland's printed
+  receipt format specifically; no other retailer is supported yet, and
+  Kaufland only operates in Germany.
+- **No automatic sync.** The Kaufland app has no public API, and the host
+  that serves digital receipts is certificate-pinned — so receipts have to
+  be exported as PDFs by hand (from the app, or via the browser Upload page)
+  rather than pulled automatically. See [Roadmap](#roadmap).
+- **No authentication on the upload endpoint.** Fine on a trusted local
+  network; not fine exposed to the open internet without a reverse proxy in
+  front of it.
+- **No Home Assistant integration yet.** Grocy Stock Push exists; an HA
+  notification hook ("this item you track just went on genuine sale") does
+  not, yet.
+- **Single-user, single-household.** There's no concept of accounts, teams,
+  or multi-tenant anything — it's built to run one instance for one person's
+  own receipts.
+- **No cross-retailer price comparison.** Price Integrity Check only ever
+  compares an item against *your own* purchase history — it can't tell you
+  whether Edeka down the street is cheaper today. See the bigger vision
+  below for why, and why that's a deliberate sequencing choice, not an
+  oversight.
+
+## Roadmap
+
+**Coming to this repo** (still self-hosted, still yours to run):
+
+- Automated receipt sync — no more manual PDF export, once the app's
+  certificate pinning is worked around
+- Home Assistant notification hook for genuine-discount alerts
+- Parsers for other German grocers (Rewe, Edeka, Lidl), extending Total
+  Spend Aggregation beyond Kaufland
+
+**The bigger vision** — and honestly, the reason this project exists at all:
+grocery prices vary by store and region in ways no single shopper can see on
+their own. Cross-retailer price comparison and sale-timing prediction only
+become possible with data from many shoppers across many locations — a
+crowd-data problem that a single self-hosted instance structurally can't
+solve. That's a different, opt-in system, not a feature that will show up in
+`docker compose up`, and it depends on Total Spend Aggregation actually
+being useful to people first. If Price Integrity Check earns its keep for
+you, that's the bet this whole project is built on.
+
+## Self-hosting details
+
+### Volumes
+
+```yaml
+volumes:
+  - ./data:/data   # receipts + uploaded PDFs — persists on the host
+```
+
+This mount is required. Without it, the container still runs, but everything
+lands on its writable layer instead and is lost the moment the container is
+removed.
+
+### Grocy Stock Push env vars
+
+Set in a git-ignored `.env` file next to `docker-compose.yml` (loaded
+automatically) — never hardcode these:
+
+```sh
+GROCY_URL=https://your-grocy-instance
+GROCY_API_KEY=your-grocy-api-key
+```
+
+Optional — leave unset and the app runs fine, `/api/grocy/*` just returns
+503.
+
+### Building locally instead of pulling
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+Or a one-off image for a specific platform:
+
+```sh
+docker build --platform linux/amd64 -t kaufland-receipts .   # or linux/arm64
+```
+
+### Alternative ingestion: Folder Watch (macOS + iCloud only)
+
+If you're running this on a Mac with iCloud Drive instead of a NAS, receipts
+can be picked up automatically from a local folder instead of uploaded
+through the browser:
 
 1. In the Kaufland app: **Digitale Kassenbons → open a receipt → als PDF
-   speichern → share to iCloud Drive** into a folder named `digital-receipts`.
+   speichern → share to iCloud Drive**, into a folder named
+   `digital-receipts`.
 2. On the Mac:
 
    ```sh
-   uv run kaufland watch            # check iCloud/digital-receipts once, ingest new PDFs, exit
-   uv run kaufland watch --no-once  # or keep polling in the background instead
-   # or one-shot:
-   uv run kaufland ingest ~/path/to/a-receipt.pdf
-   ```
-
-3. Use the data:
-
-   ```sh
-   uv run kaufland list                       # what's stored
-   uv run kaufland export --format csv -o export.csv
-   uv run kaufland prices                      # append to prices.jsonl
-   uv run kaufland summary                     # monthly rollup (Markdown)
+   uv run kaufland watch            # check once, ingest new PDFs, exit
+   uv run kaufland watch --no-once  # or keep polling in the background
    ```
 
 Receipts are cached as one JSON file each under
-`~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — re-run
-`watch`/`ingest` freely.
+`~/.local/share/kaufland-receipts/receipts/`. Ingestion is idempotent — safe
+to re-run `watch`/`ingest` freely.
 
-## Web Upload — alternative to the iCloud watcher
-
-Folder Watch (above) only works on a Mac with iCloud Drive. `kaufland serve`
-runs a small local HTTP server instead, so a receipt can be uploaded straight
-from the browser's Upload page — the ingestion path for a NAS/Docker
-deployment, or just an alternative to the iCloud folder on a Mac. Run it from
-the **repository root** (its `--web-dir` default is the relative path `web`,
-same convention as `kaufland web-data` below):
-
-```sh
-uv run kaufland serve --web-dir web   # binds 127.0.0.1:8000 by default
-cd web && npm install && npm run dev  # separate terminal — proxies /api to the server above
-```
-
-Open the printed `npm run dev` URL and go to **Upload**. A successful upload
-re-exports `web/public/data/receipts.json` immediately — no separate
-`web-data --watch` needed alongside it.
-
-`--host`/`--port` are configurable, but there is **no authentication** on the
-upload endpoint — only bind `--host 0.0.0.0` (to reach it from other devices)
-behind a trusted network or a reverse proxy that adds auth; the default
-`127.0.0.1` keeps it loopback-only.
-
-## Docker
-
-For a NAS/self-hosted deployment: one container runs both the API and the
-built frontend (no separate `npm run dev` needed, unlike the two-process
-dev flow above).
-
-```sh
-docker compose up -d --build
-```
-
-Receipts and uploaded PDFs persist in `./data` on the host (edit
-`docker-compose.yml`'s volume line to store them elsewhere) — this is the
-same `XDG_DATA_HOME`-backed store the CLI and dev workflow use, just
-mounted at `/data` inside the container. **This volume mount is required**
-— running the container without it (e.g. a plain `docker run` with no
-`-v`) still works, but everything is written to the container's own
-writable layer instead, and is permanently lost the moment the container
-is removed.
-
-Building for a specific platform (the image supports both `linux/amd64`
-and `linux/arm64`):
-
-```sh
-docker build --platform linux/amd64 -t kaufland-receipts .    # or linux/arm64
-```
-
-Same no-auth caveat as `kaufland serve` above: don't expose port 8000
-beyond a trusted network without adding auth in front of it (e.g. a
-reverse proxy).
-
-## Site (shadcn/React)
-
-[`web/`](web/) is the site for browsing receipts: a Vite + React +
-TypeScript app built with [shadcn/ui](https://ui.shadcn.com/), output to
-`site/`.
-
-For day-to-day use, run it as a dev server instead of building — no build
-step, and receipts.json is fetched at runtime (not baked in), so a browser
-refresh always shows the latest data:
-
-```sh
-uv run kaufland web-data --watch   # keeps re-exporting as you ingest receipts
-cd web && npm install && npm run dev # separate terminal — prints a local URL to open
-```
-
-`npm run dev` gives instant hot-reload on code changes; refresh the browser
-to pick up new receipt data (no rebuild either way). Only build (below) when
-producing a static copy to deploy or hand off — see [`web/README.md`](web/README.md)
-for the build/preview flow and the directory mix-up to avoid there.
-
-## Grocy Stock Push
-
-Set `GROCY_URL` and `GROCY_API_KEY` (a Grocy API key, generated in Grocy's
-own settings) as environment variables before running `kaufland serve` /
-`docker compose up`, then visit the **Grocy** tab in the web UI.
-
-Every receipt line item needs a one-time **Product Mapping** before it can
-be pushed to Grocy's stock: pick a matching Grocy product, type a new name
-to create one, or **skip** it. Skipping is permanent and remembered by the
-item's exact printed name — so lines that never belong in Grocy stock
-(loyalty discounts like "K Card XTRA Rabatt", Pfand/Leergut deposit
-returns, one-off non-food purchases) only ever need skipping once; the
-same line on every future receipt is skipped automatically from then on.
-A receipt only pushes to Grocy once every one of its line items has been
-resolved this way.
-
-Visit **Grocy → Grocy settings** first to pick a default location and
-quantity unit — used for every product created via the "create new" path,
-since Grocy requires both to exist and typing them by hand every time
-would defeat the point of a fast "type a name, press enter" flow.
-
-## Status
-
-- [x] Shared data model, idempotent store, exporters, monthly rollup (tested)
-- [x] PDF ingestion + iCloud watcher — **parser validated against real
-      digital-receipt PDFs**; parsed line items reconcile exactly to the printed
-      `Summe` (all four line shapes + loyalty discounts + Rabattaktion handled)
-- [x] Web Upload (`kaufland serve` + browser Upload page) — alternative
-      ingestion path for non-Mac/NAS use; no auth on the endpoint yet, so it's
-      loopback-only by default (see above)
-- [x] Docker packaging (`docker compose up -d`) — single container, serves
-      both the API and the built frontend; multi-arch (amd64/arm64) build
-      supported, not yet published to a registry
-- [x] Site: shadcn/React (`web/` → `site/`)
-- [ ] Frida/Android capture of `app.kaufland.net` receipt endpoints
-- [ ] `auth.py` (cidaas OAuth2 + refresh) and `api.py` auto-sync client
-- [x] Grocy Stock Push — one-way write to Grocy's stock, gated on a
-      one-time Product Mapping per line item (web UI only, no CLI)
-- [ ] Home Assistant (MQTT) Notification Hook — separate from Grocy Stock
-      Push (see `CONTEXT.md`); not yet built
-
-## Dev
+## Development
 
 ```sh
 uv sync
 uv run pytest      # core logic; no PDF or network needed
+
+cd web
+npm install
+npm run dev        # http://localhost:5173, proxies /api to a local `kaufland serve`
+npm run test
+npm run lint
 ```
+
+Running without Docker, the CLI itself covers everything the web UI does
+and more — `uv run kaufland --help` for the full list, or:
+
+```sh
+uv run kaufland ingest ~/path/to/a-receipt.pdf
+uv run kaufland list                       # what's stored
+uv run kaufland export --format csv -o export.csv
+uv run kaufland summary                    # monthly rollup (Markdown)
+uv run kaufland serve --web-dir web        # local API server, for `npm run dev` above
+```
+
+See [`web/README.md`](web/README.md) for the frontend build/preview flow in
+more detail.
+
+## License
+
+[AGPL-3.0](LICENSE). If you build on this for something that needs a
+different license, get in touch.

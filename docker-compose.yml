@@ -1,6 +1,6 @@
 services:
   kaufland-receipts:
-    build: .
+    image: ghcr.io/andrecedik/kaufland-receipts:latest
     ports:
       - "8000:8000"
     volumes:

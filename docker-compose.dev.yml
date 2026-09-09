@@ -1,0 +1,7 @@
+services:
+  kaufland-receipts:
+    # Overrides the published image with a local build -- use for developing
+    # against a container instead of pulling ghcr.io/andrecedik/kaufland-receipts.
+    #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+    build: .
+    image: kaufland-receipts:dev
