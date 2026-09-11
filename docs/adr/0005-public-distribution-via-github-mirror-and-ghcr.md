@@ -2,7 +2,7 @@
 
 **Status:** accepted
 
-`docs/adr/0004-open-core-split.md` already committed to publishing the client as open-source AGPL, but the repo has only ever lived on a private self-hosted GitLab instance (`gitlab.example`) — nothing made it actually reachable by the r/selfhosted/r/grocy launch audience, and no registry/CI existed to turn commits into a pullable image (deferred explicitly in `docs/superpowers/specs/2026-08-25-docker-packaging-design.md`).
+`docs/adr/0004-open-core-split.md` already committed to publishing the client as open-source AGPL, but the repo has only ever lived on a private self-hosted GitLab instance — nothing made it actually reachable by the r/selfhosted/r/grocy launch audience, and no registry/CI existed to turn commits into a pullable image (deferred explicitly in `docs/superpowers/specs/2026-08-25-docker-packaging-design.md`).
 
 We decided: **GitLab remains the primary dev remote** (day-to-day work, MRs, unchanged workflow) and **push-mirrors automatically to a public GitHub repo** on every push. **GitHub Actions** (not GitLab CI) runs the pipeline against the mirrored `main`, using the zero-config `GITHUB_TOKEN` to push multi-arch images to **GHCR** (not Docker Hub) as `latest` + `sha-<short-sha>` — no semver tags yet, no PR-based external contribution flow yet. `docker-compose.yml`'s default now references the published GHCR image directly (`image: ghcr.io/...`), with a separate dev override compose file for building locally, so the audience's stated preference ("pull an image, mount a folder, done") is the actual default experience, not just a documented alternative to cloning-and-building.
 
