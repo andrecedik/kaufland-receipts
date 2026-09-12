@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Pull your own Kaufland digital receipts into local structured data."
 readme = "README.md"
 authors = [
-    { name = "André Cedik", email = "andre.cedik@googlemail.com" }
+    { name = "André Cedik", email = "andre.cedik@gmail.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [
