@@ -264,6 +264,18 @@ def parse_text(text: str, *, source_file: str | None = None, label: str = "recei
     """
     lines = [ln.strip() for ln in text.splitlines()]
 
+    # Receipts from before mid-2024 are exported by the app as its rendered
+    # "Receipt Copy" screen: every row is an image tile, no text layer at
+    # all, so pypdf hands back "". Say so, instead of letting that fall
+    # through to the "not a Kaufland receipt" check below and sending the
+    # user to look for the wrong problem.
+    if not text.strip():
+        raise ValueError(
+            f"{label}: PDF has no text layer (image-only). Receipts from before "
+            "mid-2024 are exported as images by the Kaufland app and can't be "
+            "parsed yet; only text-based (newer) receipts are supported."
+        )
+
     if not is_kaufland(text):
         raise ValueError(f"{label}: does not look like a Kaufland receipt")
 

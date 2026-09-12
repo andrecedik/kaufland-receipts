@@ -98,6 +98,19 @@ def test_rejects_non_kaufland():
         parse_text("Some other shop\nSumme 5,00\nDatum:01.01.26 Zeit: 10:00:00 Bon:1")
 
 
+def test_image_only_pdf_gets_a_specific_error_not_the_generic_not_kaufland_one():
+    # Real case: receipts from before mid-2024 are exported by the Kaufland
+    # app as the rendered "Receipt Copy" screen -- every row an image tile,
+    # no text layer at all. pypdf returns "" for those, which used to fall
+    # through to "does not look like a Kaufland receipt": technically true,
+    # but it sends the user hunting for the wrong problem.
+    with pytest.raises(ValueError, match="no text layer") as exc:
+        parse_text("", label="old.pdf")
+    assert "does not look like a Kaufland receipt" not in str(exc.value)
+    with pytest.raises(ValueError, match="no text layer"):
+        parse_text("   \n\n  ", label="old.pdf")
+
+
 def test_is_kaufland_when_the_word_only_appears_in_the_footer():
     # Real bug: on a receipt with no "saved ... with Kaufland Card" loyalty
     # line and no "Kaufland - " prefix on the store line (both optional --
