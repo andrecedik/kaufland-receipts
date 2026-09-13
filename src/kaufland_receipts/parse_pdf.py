@@ -264,16 +264,17 @@ def parse_text(text: str, *, source_file: str | None = None, label: str = "recei
     """
     lines = [ln.strip() for ln in text.splitlines()]
 
-    # Receipts from before mid-2024 are exported by the app as its rendered
-    # "Receipt Copy" screen: every row is an image tile, no text layer at
-    # all, so pypdf hands back "". Say so, instead of letting that fall
-    # through to the "not a Kaufland receipt" check below and sending the
-    # user to look for the wrong problem.
+    # Receipts from before roughly July 2024 are exported by the app as its
+    # rendered "Receipt Copy" screen: every row is an image tile, no text
+    # layer at all, so pypdf hands back "". (Observed boundary on real data:
+    # last image-only receipt 2024-06-13, first text-based one 2024-07-20.)
+    # Say so, instead of letting that fall through to the "not a Kaufland
+    # receipt" check below and sending the user to look for the wrong problem.
     if not text.strip():
         raise ValueError(
             f"{label}: PDF has no text layer (image-only). Receipts from before "
-            "mid-2024 are exported as images by the Kaufland app and can't be "
-            "parsed yet; only text-based (newer) receipts are supported."
+            "July 2024 are exported as images by the Kaufland app and can't be "
+            "parsed yet; receipts from July 2024 onward are text-based and work."
         )
 
     if not is_kaufland(text):

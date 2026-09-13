@@ -81,6 +81,11 @@ export function UploadPage() {
           disabled={uploading}
           onChange={(e) => handleSelect(e.target.files)}
         />
+        <p className="text-sm text-muted-foreground">
+          Receipts from July 2024 onward work. Older ones are exported by the
+          Kaufland app as image-only PDFs with no text layer and will be
+          rejected.
+        </p>
         <Button onClick={handleUpload} disabled={rows.length === 0 || uploading}>
           {uploading ? "Uploading..." : "Upload receipts"}
         </Button>

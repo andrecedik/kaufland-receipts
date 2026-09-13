@@ -95,11 +95,11 @@ resolved.
 - **Kaufland only, German only.** The parser handles Kaufland's printed
   receipt format specifically; no other retailer is supported yet, and
   Kaufland only operates in Germany.
-- **Receipts from before mid-2024 can't be parsed.** The Kaufland app
-  exports those as its rendered "Receipt Copy" screen, an image-only PDF
-  with no text layer. The parser is text-based (no OCR), so it rejects them
-  with a clear error instead of guessing. Newer receipts export as real
-  text and work.
+- **Only receipts from July 2024 onward can be parsed.** Older ones are
+  exported by the Kaufland app as its rendered "Receipt Copy" screen, an
+  image-only PDF with no text layer (the switch happened in the second half
+  of June 2024). The parser is text-based (no OCR), so it rejects those with
+  a clear error instead of guessing.
 - **No automatic sync.** The Kaufland app has no public API, and the host
   that serves digital receipts is certificate-pinned. Receipts have to be
   exported as PDFs by hand (from the app, or via the browser Upload page)
